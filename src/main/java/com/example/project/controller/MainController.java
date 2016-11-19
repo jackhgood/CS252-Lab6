@@ -25,10 +25,7 @@ public class MainController {
      * @return the name of the jsp to display
      */
 	@RequestMapping("")
-	public String home(HttpServletRequest request,
-					   Model model,
-                       @RequestParam(required = false) String userName,
-                       @RequestParam(required = false) String url) {
+	public String home(HttpServletRequest request, Model model) {
 		model.addAttribute("message", "Hello World!");
 		return "main";
 	}
