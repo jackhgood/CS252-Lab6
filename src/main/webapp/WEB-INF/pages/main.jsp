@@ -8,6 +8,10 @@
 
     <script type='text/javascript' src="<c:url value="/webjars/jquery/1.9.1/jquery.js" />"></script>
 
+	<script type="text/javascript" src="/webjars/three.js/r77/three.min.js"></script>
+	<script type="text/javascript" src="/js/physijs/stats.js"></script>
+	<script type="text/javascript" src="/js/physijs/physi.js"></script>
+
     <link rel="stylesheet" href="<c:url value="/css/main.css" />" />
 </head>
 <body>

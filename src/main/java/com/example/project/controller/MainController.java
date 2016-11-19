@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletRequest;
  * Basic controller for the main menu page.
  */
 @Controller
-@RequestMapping("")
+@RequestMapping("/app-name")
 public class MainController {
 
     @SuppressWarnings("SpringJavaAutowiringInspection")
@@ -24,10 +24,10 @@ public class MainController {
      * Displays the main menu page.
      * @return the name of the jsp to display
      */
-	@RequestMapping("")
+	@RequestMapping("/main")
 	public String home(HttpServletRequest request, Model model) {
 		model.addAttribute("message", "Hello World!");
-		return "main";
+		return "collisions";
 	}
 
 }
