@@ -84,12 +84,6 @@
 			<version>r77</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.jsweet.candies</groupId>
-			<artifactId>physijs</artifactId>
-			<version>0.0.0-1.0.0-20160202</version>
-		</dependency>
-
 	</dependencies>
 
 
