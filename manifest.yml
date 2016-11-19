@@ -1,0 +1,11 @@
+applications:
+- path: target/SpringMVCTest.war
+  memory: 512M
+  instances: 1
+  domain: mybluemix.net
+  name: tomcat-test
+  host: good10
+  disk_quota: 1024M
+  services:
+  - availability-monitoring-auto
+  buildpack: java_buildpack
