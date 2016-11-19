@@ -45,5 +45,7 @@
     <orderEntry type="library" name="Maven: org.springframework:spring-webmvc:4.1.7.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-expression:4.1.7.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.webjars:jquery:1.9.1" level="project" />
+    <orderEntry type="library" name="Maven: org.webjars:three.js:r77" level="project" />
+    <orderEntry type="library" name="Maven: org.jsweet.candies:physijs:0.0.0-1.0.0-20160202" level="project" />
   </component>
 </module>
