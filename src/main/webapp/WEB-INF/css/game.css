@@ -1,0 +1,16 @@
+
+/**
+ * Style settings for the game itself
+ */
+
+/* allows the canvas to fill the screen */
+html {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}

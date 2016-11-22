@@ -1,0 +1,7 @@
+High-level things that need done:
+
+*come up with a name for the game and replace "SpringMVCTest" with it
+-test robustness on Bluemix
+-investigate further into MongoDB--figure out if it's good for JSON, and if so, get it set up
+	subnote: will it only work when the app is deployed on Bluemix? That would be annoying
+-investigate the possibility of the Bluemix SSO service for keeping track of level creators
