@@ -14,6 +14,7 @@
 	<script type="text/javascript" src="<c:url value='/js/physijs/physi.js' />"></script>
 
 	<script type="text/javascript" src="<c:url value='/js/player.js' />"></script>
+	<script type="text/javascript" src="<c:url value='/js/level.js' />"></script>
 
 	<script type="text/javascript">
 		'use strict';
@@ -22,14 +23,13 @@
 		Physijs.scripts.ammo = "<c:url value='/js/physijs/ammo.js' />";
 
 		// functions
-		var init, gameUpdate, render;
+		var init, gameUpdate, render, startLevel;
 
 		// visual elements
-		// TODO: move lighting to the future "level" class
-		var viewport, renderer, render_stats, physics_stats, scene, light, player;
+		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = false; // set to true to show additional things to help with debugging physics & rendering
+		var debug = true; // set to true to show additional things to help with debugging physics & rendering
 
 		// other
 		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
@@ -62,114 +62,13 @@
 			physics_stats.domElement.style.zIndex = 100;
 			viewport.appendChild(physics_stats.domElement);
 
-			// initialize the scene
-			scene = new Physijs.Scene({ fixedTimeStep: 1/90 });
-			scene.setGravity(new THREE.Vector3(0, -30, 0));
-			scene.addEventListener(
-					"update",
-					function() {
-						gameUpdate();
-						scene.simulate(undefined, 2);
-						physics_stats.update();
-					}
-			);
-
-			// lighting
-			// TODO: lighting is kind of arbitrary at the moment. Ideally it would be moved to "level" and given a saveable setting
-			// TODO: add ambient light so shadows arent 100% black
-			// ambient light
-			scene.add(new THREE.AmbientLight(0x404040));
-			// directional light
-			// TODO: toy with the possibility of yellowish light to simulate sunlight
-			// TODO: Godrays?!?!??!
-			light = new THREE.DirectionalLight(0xFFFFFF);
-			light.position.set(20, 40, -15);
-			light.target.position.copy(scene.position);
-			light.castShadow = true;
-			// TODO: these settings need some massive tweaking and will depend on level size
-			light.shadow.camera.left = -60;
-			light.shadow.camera.top = -60;
-			light.shadow.camera.right = 60;
-			light.shadow.camera.bottom = 60;
-			light.shadow.camera.near = 20;
-			light.shadow.camera.far = 200;
-			// this especially may need adjusting to make the checkerboard pattern on some shadows go away
-			light.shadow.bias = -.003;
-			// this is basically the shadow "resolution" -- it's very important
-			light.shadow.mapSize.height = light.shadow.mapSize.width = 2048;
-			light.intensity = 1;
-			scene.add(light);
-			if(debug) scene.add(new THREE.CameraHelper(light.shadow.camera));
-
-			// TODO: these are placeholder testing objects that should be removed when the real world is added
-			var ground_material = Physijs.createMaterial(
-					new THREE.MeshLambertMaterial({ color: 0x888888 }),
-					.8, // friction
-					.4  // restitution
-			);
-			var ground = new Physijs.BoxMesh(
-					new THREE.CubeGeometry(100, 0.5, 100),
-					ground_material,
-					0 // mass
-			);
-			ground.receiveShadow = true;
-			ground.castShadow = false;
-			scene.add(ground);
-
-			var item_material = Physijs.createMaterial(
-					new THREE.MeshLambertMaterial({ color: 0x8888ff }),
-					.8, .4
-			);
-			var box = new Physijs.BoxMesh(
-					new THREE.CubeGeometry(1, 1, 1),
-					item_material, 1
-			);
-			box.position.set(-20, 12, 20);
-			box.castShadow = box.receiveShadow = true;
-			scene.add(box);
-
-			// to test slopes
-			var cone = new Physijs.ConeMesh(
-					new THREE.ConeGeometry(10, 4),
-					item_material,
-					0
-			);
-			cone.position.set(20, 2, 20);
-			cone.castShadow = cone.receiveShadow = true;
-			scene.add(cone);
-			var cone2 = new Physijs.ConeMesh(
-					new THREE.ConeGeometry(10, 12),
-					item_material,
-					0
-			);
-			cone2.position.set(20, 6, -20);
-			cone2.castShadow = cone2.receiveShadow = true;
-			scene.add(cone2);
-			var cone3 = new Physijs.ConeMesh(
-					new THREE.ConeGeometry(10, 30),
-					item_material,
-					0
-			);
-			cone3.position.set(-20, 15, -20);
-			cone3.castShadow = cone3.receiveShadow = true;
-			scene.add(cone3);
-
-			// TODO: end of temporary objects: insert call to build world here
-
-			// create the player
-			// TODO: it might make the most sense to let the player belong to the level and do this in level initialization
-			// TODO: since then the level can dictate the player's starting position
-			// TODO: and the player can hand level editor information directly to the level
-			player = new Player(scene, debug);
-
 			// pointer lock setup
 			// based heavily on https://threejs.org/examples/misc_controls_pointerlock.html
 			// different browsers use different naming schemes, hence the "moz" and "webkit"
 			// however, all browsers conventiently seem to exit pointer lock when escape is pressed
 			if("pointerLockElement" in document || "mozPointerLockElement" in document || "webkitPointerLockElement" in document) {
 				// the element which governs the pointer lock
-				// TODO: this might be best if changed to the viewport
-				var element = document.body;
+				var element = viewport;
 
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
@@ -250,13 +149,12 @@
 					function(event) {
 						var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 						var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-						player.rotate(movementX, movementY);
+						level.player.rotate(movementX, movementY);
 					}
 			);
 
 			// begin
-			requestAnimationFrame(render);
-			scene.simulate();
+			startLevel();
 
 		};
 
@@ -265,18 +163,39 @@
 		 * Used to trigger player's change of position as result of controls input.
 		 */
 		gameUpdate = function() {
-			player.update(keystatus);
+			level.player.update(keystatus);
 		};
 
 		/**
 		 * Called once per frame, when the scene is ready to render.
 		 */
 		render = function() {
-			// TODO: special portal rendering will likely go herew
-			player.prepCamera();
+			// TODO: special portal rendering will likely go here
+			level.player.prepCamera();
 			requestAnimationFrame(render);
-			renderer.render(scene, player.camera);
+			renderer.render(level.scene, level.player.camera);
 			render_stats.update();
+		};
+
+		/**
+		 * Load the level, initialize the scene, and start the game.
+		 * May be called again to reset the level.
+		 */
+		startLevel = function () {
+			// load the level and initialize the scene
+			level = new Level(debug);
+			level.constructScene().addEventListener(
+					"update",
+					function() {
+						gameUpdate();
+						level.scene.simulate(undefined, 2);
+						physics_stats.update();
+					}
+			);
+
+			// begin simulation
+			requestAnimationFrame(render);
+			level.scene.simulate();
 		};
 
 		// request that init be called once the html below is fully loaded

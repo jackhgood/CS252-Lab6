@@ -2,7 +2,7 @@
  * Constructor for Player.
  * Adds the camera and player physics objects to the scene.
  * @param scene the Physijs.scene the player will belong to
- * @param debug whether to display the player in debug mode
+ * @param debug whether to display the player in debug mode (default false)
  * @constructor
  */
 var Player = function(scene, debug) {
@@ -13,7 +13,7 @@ var Player = function(scene, debug) {
 	this.mouseSensitivity = 0.004;
 	this.height = 1.8;
 	this.width = 0.5;
-	this.mass = 10; // TODO: determine mass units
+	this.mass = 5; // TODO: determine mass units
 
 	this.debug = (typeof debug == "undefined") ? false : debug;
 	this.scene = scene;
@@ -42,8 +42,6 @@ var Player = function(scene, debug) {
 		bodyMaterial,
 		0.5 * this.mass
 	);
-	// TODO: integrate player with the level and initialize a true default position
-	this.body.position.y = 20;
 	scene.add(this.body);
 	// lock all rotation, producing a rigid player
 	// must be called after adding to scene, not before
@@ -80,7 +78,7 @@ var Player = function(scene, debug) {
 	// initialize a special short-range raycaster that determines whether the player is on the ground
 	this.onGround = false;
 	this.groundcaster = new THREE.Raycaster();
-	this.groundcaster.far = 0.3 * this.height; // TODO: this will need tuned
+	this.groundcaster.far = 0.5 * this.height; // TODO: this will need tuned
 
 	// so that we only have to divide pi by 2 once
 	this.HALF_PI = Math.PI / 2;
@@ -98,7 +96,7 @@ Player.prototype = {
 		// use our short range raycaster to see if the player is on the ground
 		this.onGround = false;
 		this.groundcaster.set(this.foot.position, new THREE.Vector3(0, -1, 0));
-		var intersects = this.groundcaster.intersectObjects(scene.children);
+		var intersects = this.groundcaster.intersectObjects(this.scene.children);
 		for(var i = 0; i < intersects.length; i++) {
 			if(intersects[i].object != this.foot && intersects[i].object != this.body) {
 				this.onGround = true;
@@ -168,5 +166,20 @@ Player.prototype = {
 		// if in debug mode, shift to 3rd person
 		// TODO: maybe add scroll wheel to change camera distance from body
 		if(this.debug) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+	},
+
+	/**
+	 * Sets the player's position and rotation.
+	 * @param pos the desired THREE.Vector3 position
+	 * @param rot the desired THREE.Vector3 position
+	 */
+	set: function(pos, rot) {
+		var footoffs = this.foot.position.sub(this.body.position);
+		this.body.position.copy(pos);
+		this.foot.position.copy(footoffs.add(pos));
+		this.camera.rotation.copy(rot);
+		this.body.__dirtyPosition = true;
+		this.foot.__dirtyPosition = true;
 	}
+
 };
