@@ -53,14 +53,14 @@
 			render_stats = new Stats();
 			render_stats.domElement.style.position = "absolute";
 			render_stats.domElement.style.top = "0px";
-			render_stats.domElement.style.zIndex = 100;
+			render_stats.domElement.style.zIndex = 999;
 			viewport.appendChild(render_stats.domElement);
 
-			// set up the fps counter for physics and add it to the viewport
+			// set up the tick counter for physics and add it to the viewport
 			physics_stats = new Stats();
 			physics_stats.domElement.style.position = "absolute";
 			physics_stats.domElement.style.top = "50px";
-			physics_stats.domElement.style.zIndex = 100;
+			physics_stats.domElement.style.zIndex = 999;
 			viewport.appendChild(physics_stats.domElement);
 
 			// pointer lock setup
@@ -69,20 +69,18 @@
 			// however, all browsers conventiently seem to exit pointer lock when escape is pressed
 			if("pointerLockElement" in document || "mozPointerLockElement" in document || "webkitPointerLockElement" in document) {
 				// the element which governs the pointer lock
-				var element = viewport;
+				var element = document.getElementById("pauseOverlay");
 
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
 					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
-						document.getElementById("pauseMenu").style.display = "none";
+						document.getElementById("pauseOverlay").style.display = "none";
 						paused = false;
 						level.scene.onSimulationResume();
 						level.scene.simulate();
 					} else {
 						// TODO: apparently this doesn't work in Firefox. I need to find a different way to center content
-						document.getElementById("pauseMenu").style.display = "box";
-						document.getElementById("pauseMenu").style.display = "-webkit-box";
-						document.getElementById("pauseMenu").style.display = "-moz-box";
+						document.getElementById("pauseOverlay").style.display = "block";
 						paused = true;
 					}
 				};
@@ -100,11 +98,12 @@
 				document.addEventListener("webkitpointerlockerror", pointerlockerror);
 
 				// attempt to lock the pointer when the element is clicked
-				// TODO: figure out what happens to click events while the pointer is locked
+				// TODO: use the viewport as the click handler for clicking while in-game
 				element.addEventListener("click", function(event) {
 					// request that the browser lock the pointer
 					element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-					if(/Firefox/i.test(navigator.userAgent)) { // TODO: what on earth does this mean?
+					// TODO: support fullscreen
+					/*if(/Firefox/i.test(navigator.userAgent)) { // TODO: what on earth does this mean?
 						var fullscreenchange = function(event){
 							if(document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element) {
 								// TODO: I think we are maybe losing some functionality (like resizing the viewport) by deleting the old fullscreen handler
@@ -117,9 +116,8 @@
 						document.addEventListener('mozfullscreenchange', fullscreenchange, false );
 						element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
 						element.requestFullscreen();
-					} else {
-						element.requestPointerLock();
-					}
+						*/
+					element.requestPointerLock();
 				});
 			} else {
 				// TODO: investigate whether any modern browsers do this
@@ -220,8 +218,9 @@
 
 <!-- TODO: add things for pause, click to begin, controls -->
 <div id="viewport">
+	<div id="pauseOverlay">
 		<div id="pauseMenu">
-			<table>
+			<table style="margin: auto">
 				<tr><td colspan="2" style="text-align: center; font-weight: bold; font-size: 36pt">Click to Play</td></tr>
 				<tr>
 					<td>
@@ -243,6 +242,7 @@
 				</tr>
 			</table>
 		</div>
+	</div>
 </div>
 
 </body>
