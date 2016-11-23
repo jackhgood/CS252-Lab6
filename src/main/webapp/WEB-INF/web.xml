@@ -10,13 +10,13 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>/META-INF/context.xml</param-value>
 	</context-param>
-
+<!--
     <listener>
         <listener-class>
             com.example.project.listener.AppListener
         </listener-class>
     </listener>
-
+-->
     <!--
     <filter>
         <filter-name>springSecurityFilterChain</filter-name>

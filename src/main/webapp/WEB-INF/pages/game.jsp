@@ -29,11 +29,12 @@
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = true; // set to true to show additional things to help with debugging physics & rendering
+		var debug = false; // set to true to show additional things to help with debugging physics & rendering
 
 		// other
 		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
 		var keylock = []; // used to keep keys from auto-pressing when held down
+		var paused = true;
 
 		/**
 		 * First-time initialization of the scene, the world, and other elements.
@@ -73,9 +74,16 @@
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
 					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
-						// TODO: events caused by locking pointer go here
+						document.getElementById("pauseMenu").style.display = "none";
+						paused = false;
+						level.scene.onSimulationResume();
+						level.scene.simulate();
 					} else {
-						// TODO: events caused by unlocking pointer go here
+						// TODO: apparently this doesn't work in Firefox. I need to find a different way to center content
+						document.getElementById("pauseMenu").style.display = "box";
+						document.getElementById("pauseMenu").style.display = "-webkit-box";
+						document.getElementById("pauseMenu").style.display = "-moz-box";
+						paused = true;
 					}
 				};
 
@@ -147,9 +155,11 @@
 			document.addEventListener(
 					"mousemove",
 					function(event) {
-						var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-						var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-						level.player.rotate(movementX, movementY);
+						if(!paused) {
+							var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+							var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+							level.player.rotate(movementX, movementY);
+						}
 					}
 			);
 
@@ -187,9 +197,12 @@
 			level.constructScene().addEventListener(
 					"update",
 					function() {
-						gameUpdate();
-						level.scene.simulate(undefined, 2);
-						physics_stats.update();
+						// if it's paused, do nothing and check again in a moment
+						if(!paused) {
+							gameUpdate();
+							level.scene.simulate(undefined, 2);
+							physics_stats.update();
+						}
 					}
 			);
 
@@ -206,7 +219,31 @@
 <body>
 
 <!-- TODO: add things for pause, click to begin, controls -->
-<div id="viewport"></div>
+<div id="viewport">
+		<div id="pauseMenu">
+			<table>
+				<tr><td colspan="2" style="text-align: center; font-weight: bold; font-size: 36pt">Click to Play</td></tr>
+				<tr>
+					<td>
+						<table>
+							<tr><td class="key">W</td><td>Forward</td>
+							<tr><td class="key">S</td><td>Back</td>
+							<tr><td class="key">A</td><td>Strafe Left</td></tr>
+							<tr><td class="key">D</td><td>Strafe Right</td></tr>
+						</table>
+					</td>
+					<td>
+						<table>
+							<tr><td class="key">Space</td><td>Jump</td></tr>
+							<tr><td class="key">Escape</td><td>Pause</td></tr>
+							<tr><td class="key"><br/></td><td></td></tr>
+							<tr><td class="key"><br/></td><td></td></tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+		</div>
+</div>
 
 </body>
 </html>
