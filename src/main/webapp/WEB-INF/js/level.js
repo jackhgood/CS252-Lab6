@@ -10,11 +10,13 @@
  * If no data is given, a default starter level is generated.
  * @param debug whether to display the level in debug mode (default false)
  * @param data optional - the JSON representing the contents of the level
+ * @param timestep the expected time between physics simulations
  * @constructor
  */
-var Level = function(debug, data) {
-	this.debug = (typeof debug == "undefined") ? false : debug;
+var Level = function(data, timestep, debug) {
 	this.data = (typeof data == "undefined") ? this.getDefaultLevelData() : data;
+	this.timestep = (typeof timestep == "undefined") ? 1 / 60: timestep;
+	this.debug = (typeof debug == "undefined") ? false : debug;
 };
 
 Level.prototype = {
@@ -41,11 +43,11 @@ Level.prototype = {
 	 */
 	constructScene: function() {
 		// set update time interval
-		this.scene = new Physijs.Scene({ fixedTimeStep: 1/90 });
+		this.scene = new Physijs.Scene({ fixedTimeStep: timestep });
 		this.scene.setGravity(new THREE.Vector3(0, -30, 0));
 
 		// player
-		this.player = new Player(this.scene, this.debug);
+		this.player = new Player(this.scene, this.timestep, this.debug);
 		this.player.set(this.data.playerPosition, this.data.playerRotation);
 
 		// TODO: lighting is kind of arbitrary at the moment. Ideally it would be given a saveable setting
@@ -79,7 +81,7 @@ Level.prototype = {
 			.4  // restitution
 		);
 		var ground = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(100, 0.5, 100),
+			new THREE.CubeGeometry(1000, 0.5, 1000),
 			ground_material,
 			0 // mass
 		);
@@ -101,7 +103,7 @@ Level.prototype = {
 
 		// to test slopes
 		var cone = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 4),
+			new THREE.ConeGeometry(10, 4, 40),
 			item_material,
 			0
 		);
@@ -109,7 +111,7 @@ Level.prototype = {
 		cone.castShadow = cone.receiveShadow = true;
 		this.scene.add(cone);
 		var cone2 = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 10),
+			new THREE.ConeGeometry(10, 10, 40),
 			item_material,
 			0
 		);
@@ -117,7 +119,7 @@ Level.prototype = {
 		cone2.castShadow = cone2.receiveShadow = true;
 		this.scene.add(cone2);
 		var cone3 = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 30),
+			new THREE.ConeGeometry(10, 30, 40),
 			item_material,
 			0
 		);

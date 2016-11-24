@@ -38,7 +38,15 @@ body {
 	color: white;
 }
 
-#pauseMenu .key {
+#debug {
+	position: absolute;
+	top: 50px;
+	left: 0;
+	font-family: "Courier New", monospace;
+	color: white;
+}
+
+.key {
 	text-align: right;
 	font-weight: bold;
 	padding-right: 4px;

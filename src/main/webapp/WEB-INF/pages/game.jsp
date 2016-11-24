@@ -23,13 +23,14 @@
 		Physijs.scripts.ammo = "<c:url value='/js/physijs/ammo.js' />";
 
 		// functions
-		var init, gameUpdate, render, startLevel;
+		var init, gameUpdate, debugUpdate, render, startLevel;
 
 		// visual elements
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = false; // set to true to show additional things to help with debugging physics & rendering
+	var debug = true; // set to true to show additional things to help with debugging physics & rendering
+		var timestep = 1/90;
 
 		// other
 		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
@@ -49,19 +50,22 @@
 			renderer.shadowMapSoft = true;
 			viewport.appendChild(renderer.domElement);
 
-			// set up the fps counter for rendering and add it to the viewport
-			render_stats = new Stats();
-			render_stats.domElement.style.position = "absolute";
-			render_stats.domElement.style.top = "0px";
-			render_stats.domElement.style.zIndex = 999;
-			viewport.appendChild(render_stats.domElement);
+			if(debug) {
+				// set up the fps counter for rendering and add it to the viewport
+				render_stats = new Stats();
+				render_stats.domElement.style.position = "absolute";
+				render_stats.domElement.style.top = "0px";
+				render_stats.domElement.style.zIndex = 999;
+				viewport.appendChild(render_stats.domElement);
 
-			// set up the tick counter for physics and add it to the viewport
-			physics_stats = new Stats();
-			physics_stats.domElement.style.position = "absolute";
-			physics_stats.domElement.style.top = "50px";
-			physics_stats.domElement.style.zIndex = 999;
-			viewport.appendChild(physics_stats.domElement);
+				// set up the tick counter for physics and add it to the viewport
+				physics_stats = new Stats();
+				physics_stats.domElement.style.position = "absolute";
+				physics_stats.domElement.style.top = "0px";
+				physics_stats.domElement.style.left = "75px";
+				physics_stats.domElement.style.zIndex = 999;
+				viewport.appendChild(physics_stats.domElement);
+			} else document.getElementById("debug").style.display = "none";
 
 			// pointer lock setup
 			// based heavily on https://threejs.org/examples/misc_controls_pointerlock.html
@@ -161,6 +165,15 @@
 					}
 			);
 
+			window.addEventListener(
+					"resize",
+					function(event) {
+						if(level.player.camera) level.player.camera.aspect = window.innerWidth / window.innerHeight;
+						level.player.camera.updateProjectionMatrix();
+						renderer.setSize(window.innerWidth, window.innerHeight);
+					}
+			);
+
 			// begin
 			startLevel();
 
@@ -175,6 +188,32 @@
 		};
 
 		/**
+		 * Called once per physics tick, if in debug mode.
+		 * Updates information displayed in debug mode.
+		 */
+		var lastPos = new THREE.Vector3(0, 0, 0);
+		var lastRot = new THREE.Vector3(0, 0, 0);
+		debugUpdate = function() {
+			document.getElementById("debug_playerPosition").innerHTML = "("
+					+ Number(level.player.body.position.x).toFixed(2) + ", "
+					+ Number(level.player.body.position.y).toFixed(2) + ", "
+					+ Number(level.player.body.position.z).toFixed(2) + ")";
+			document.getElementById("debug_playerRotation").innerHTML = "("
+					+ Number(level.player.camera.rotation.x).toFixed(2) + ", "
+					+ Number(level.player.camera.rotation.y).toFixed(2) + ", "
+					+ Number(level.player.camera.rotation.z).toFixed(2) + ")";
+			lastPos.sub(level.player.body.position).divideScalar(timestep);
+			document.getElementById("debug_playerVelocity").innerHTML = "("
+					+ Number(-lastPos.x).toFixed(2) + ", "
+					+ Number(-lastPos.y).toFixed(2) + ", "
+					+ Number(-lastPos.z).toFixed(2) + ")";
+			document.getElementById("debug_playerSpeed").innerHTML = lastPos.length().toFixed(2);
+			document.getElementById("debug_playerOnGround").innerHTML = "" + level.player.onGround;
+			lastPos.copy(level.player.body.position);
+			lastRot.copy(level.player.camera.rotation);
+		};
+
+		/**
 		 * Called once per frame, when the scene is ready to render.
 		 */
 		render = function() {
@@ -182,7 +221,7 @@
 			level.player.prepCamera();
 			requestAnimationFrame(render);
 			renderer.render(level.scene, level.player.camera);
-			render_stats.update();
+			if(debug) render_stats.update();
 		};
 
 		/**
@@ -191,7 +230,7 @@
 		 */
 		startLevel = function () {
 			// load the level and initialize the scene
-			level = new Level(debug);
+			level = new Level(undefined, timestep, debug);
 			level.constructScene().addEventListener(
 					"update",
 					function() {
@@ -199,7 +238,10 @@
 						if(!paused) {
 							gameUpdate();
 							level.scene.simulate(undefined, 2);
-							physics_stats.update();
+							if(debug) {
+								physics_stats.update();
+								debugUpdate();
+							}
 						}
 					}
 			);
@@ -218,6 +260,15 @@
 
 <!-- TODO: add things for pause, click to begin, controls -->
 <div id="viewport">
+	<div id="debug">
+		<table>
+			<tr><td class="key">Position:</td><td id="debug_playerPosition"></td></tr>
+			<tr><td class="key">Rotation:</td><td id="debug_playerRotation"></td></tr>
+			<tr><td class="key">Velocity:</td><td id="debug_playerVelocity"></td></tr>
+			<tr><td class="key">Speed:</td><td id="debug_playerSpeed"></td></tr>
+			<tr><td class="key">onGround:</td><td id="debug_playerOnGround"></td></tr>
+		</table>
+	</div>
 	<div id="pauseOverlay">
 		<div id="pauseMenu">
 			<table style="margin: auto">
