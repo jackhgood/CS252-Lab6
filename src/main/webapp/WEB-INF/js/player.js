@@ -22,11 +22,14 @@ var Player = function(scene, timestep, debug) {
 	this.scene = scene;
 	this.timestep = timestep;
 	this.debug = (typeof debug == "undefined") ? false : debug;
+	// TODO: we may have to scale the world before rendering or something so near and far aren't such a huge gap
+	// TODO: perhaps make the sky part of a separate scene, render it first with high far, then adjust it down?
+	// TODO: or just scale down the scene with the sky in it?
 	this.camera = new THREE.PerspectiveCamera(
 		70, // FOV
 		window.innerWidth / window.innerHeight, // aspect ratio
-		0.3, // near
-		1000 // far
+		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
+		500000 // far (the sky sphere is at 450,000)
 	);
 	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this

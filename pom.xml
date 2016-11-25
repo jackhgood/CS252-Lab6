@@ -73,14 +73,6 @@
 			<version>1.9.1</version>
 		</dependency>
 
-		<!--HACK: delete three.js in the war (and leave three.min.js) for cf push to work
-		    TODO: figure out why it can't import certain jars and fix it-->
-		<dependency>
-			<groupId>org.webjars</groupId>
-			<artifactId>three.js</artifactId>
-			<version>r77</version>
-		</dependency>
-
 	</dependencies>
 
 

@@ -9,10 +9,12 @@
 	<link rel="stylesheet" href="<c:url value='/css/main.css' />" />
 	<link rel="stylesheet" type="text/css" href="<c:url value='/css/game.css' />" />
 
-	<script type="text/javascript" src="<c:url value='/webjars/three.js/r77/three.min.js' />"></script>
+	<script type="text/javascript" src="<c:url value='/js/threejs/three.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/physijs/stats.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/physijs/physi.js' />"></script>
+	<script type="text/javascript" src="<c:url value='/js/threejs/SkyShader.js' />"></script>
 
+	<script type="text/javascript" src="<c:url value='/js/portal.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/player.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/level.js' />"></script>
 
@@ -29,7 +31,7 @@
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-	var debug = true; // set to true to show additional things to help with debugging physics & rendering
+		var debug = false; // set to true to show additional things to help with debugging physics & rendering
 		var timestep = 1/90;
 
 		// other
@@ -48,6 +50,7 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
 			renderer.shadowMapSoft = true;
+			renderer.autoClear = false;
 			viewport.appendChild(renderer.domElement);
 
 			if(debug) {
@@ -219,8 +222,10 @@
 		render = function() {
 			// TODO: special portal rendering will likely go here
 			level.player.prepCamera();
+			renderer.clear();
 			requestAnimationFrame(render);
 			renderer.render(level.scene, level.player.camera);
+			level.renderPortals(renderer);
 			if(debug) render_stats.update();
 		};
 
