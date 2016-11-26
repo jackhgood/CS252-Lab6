@@ -39,9 +39,7 @@ var Player = function(scene, timestep, debug) {
 	// build the player's physical body
 	// the main section is low-friction to avoid clinging to walls
 	var bodyMaterial = Physijs.createMaterial(
-		debug ?
-			new THREE.MeshBasicMaterial({ color: 0x66ff66, wireframe: true }) :
-			new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }),
+		new THREE.MeshBasicMaterial({ color: 0x66ff66, wireframe: true }),
 		0.1, // low friction
 		0    // no restitution
 	);
@@ -50,6 +48,7 @@ var Player = function(scene, timestep, debug) {
 		bodyMaterial,
 		0.5 * this.mass
 	);
+	this.body.visible = debug;
 	scene.add(this.body);
 	// lock all rotation, producing a rigid player
 	// must be called after adding to scene, not before
@@ -57,9 +56,7 @@ var Player = function(scene, timestep, debug) {
 
 	// build the player's "foot", a smaller piece with high friction that prevents sliding on the ground
 	var footMaterial = Physijs.createMaterial(
-		debug ?
-			new THREE.MeshBasicMaterial({ color: 0xffff66, wireframe: true }) :
-			new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }),
+		new THREE.MeshBasicMaterial({ color: 0xffff66, wireframe: true }),
 		this.friction, // high friction
 		0 // no restitution
 	);
@@ -68,7 +65,9 @@ var Player = function(scene, timestep, debug) {
 		footMaterial,
 		0.5 * this.mass
 	);
+	this.foot.visible = debug;
 	this.foot.rotateX(Math.PI);
+
 	this.foot.position.set(this.body.position.x, this.body.position.y - 0.525 * this.height, this.body.position.z);
 	this.foot.addEventListener(
 		"collision",

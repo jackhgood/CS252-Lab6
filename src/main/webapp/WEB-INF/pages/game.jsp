@@ -224,8 +224,10 @@
 			level.player.prepCamera();
 			renderer.clear();
 			requestAnimationFrame(render);
-			renderer.render(level.scene, level.player.camera);
-			level.renderPortals(renderer);
+			var gl = renderer.context;
+			gl.enable(gl.STENCIL_TEST);
+			level.render(renderer, level.player.camera, -1, 12);
+			gl.disable(gl.STENCIL_TEST);
 			if(debug) render_stats.update();
 		};
 
