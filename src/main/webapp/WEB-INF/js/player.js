@@ -29,7 +29,7 @@ var Player = function(scene, timestep, debug) {
 		70, // FOV
 		window.innerWidth / window.innerHeight, // aspect ratio
 		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
-		500000 // far (the sky sphere is at 450,000)
+		6000 // far (the skybox is at 450,000, currently scaled by 0.01)
 	);
 	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this
@@ -48,7 +48,7 @@ var Player = function(scene, timestep, debug) {
 		bodyMaterial,
 		0.5 * this.mass
 	);
-	this.body.visible = debug;
+	this.body.visible = false;
 	scene.add(this.body);
 	// lock all rotation, producing a rigid player
 	// must be called after adding to scene, not before
@@ -65,7 +65,7 @@ var Player = function(scene, timestep, debug) {
 		footMaterial,
 		0.5 * this.mass
 	);
-	this.foot.visible = debug;
+	this.foot.visible = false;
 	this.foot.rotateX(Math.PI);
 
 	this.foot.position.set(this.body.position.x, this.body.position.y - 0.525 * this.height, this.body.position.z);
@@ -90,8 +90,10 @@ var Player = function(scene, timestep, debug) {
 	if(debug) {
 		this.groundcasterLine = new THREE.Line(new THREE.Geometry(), new THREE.MeshBasicMaterial({ color: 0x6666ff }));
 		scene.add(this.groundcasterLine);
+		this.groundcasterLine.visible = false;
 		this.groundcasterPoint = new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshBasicMaterial({ color: 0xffff66 }));
 		scene.add(this.groundcasterPoint);
+		this.groundcasterPoint.visible = false;
 	}
 
 	// just for convenience
@@ -100,6 +102,9 @@ var Player = function(scene, timestep, debug) {
 
 	// used to compensate for friction later
 	this.lastVelocity = new THREE.Vector3(0, 0, 0);
+
+	// can be toggled
+	this.thirdPerson = false;
 };
 
 Player.prototype = {
@@ -242,7 +247,7 @@ Player.prototype = {
 		);
 		// if in debug mode, shift to 3rd person
 		// TODO: maybe add scroll wheel to change camera distance from body
-		if(this.debug) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		if(this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
 	},
 
 	/**
@@ -258,6 +263,25 @@ Player.prototype = {
 		this.foot.__dirtyPosition = true;
 		if(!(typeof rot == "undefined"))
 			this.camera.rotation.copy(rot);
+	},
+
+	/**
+	 * Toggles whether the player is in third person.
+	 */
+	toggleThirdPerson: function() {
+		if(this.thirdPerson) {
+			this.thirdPerson = false;
+			this.body.visible = false;
+			this.foot.visible = false;
+			this.groundcasterLine.visible = false;
+			this.groundcasterPoint.visible = false;
+		} else {
+			this.thirdPerson = true;
+			this.body.visible = true;
+			this.foot.visible = true;
+			this.groundcasterLine.visible = true;
+			this.groundcasterPoint.visible = true;
+		}
 	}
 
 };

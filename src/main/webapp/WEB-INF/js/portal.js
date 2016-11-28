@@ -3,7 +3,7 @@
  * @param scene the scene the portal belongs to
  * @param player the player who owns the portal
  * @param position vector of the location of the center of the portal
- * @param rotation the YXZ-ordered rotation of the portal
+ * @param rotation the THREE.Euler rotation
  * @param color the color of the portal
  * @param debug whether to render in debug mode
  * @constructor
@@ -16,29 +16,25 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 
 	this.scene = scene;
 	this.position = position;
+	if(rotation.order !== "YXZ") rotation.reorder("YXZ");
 	this.rotation = rotation;
+	this.antirotation = new THREE.Euler(-rotation.x, -rotation.y, -rotation.z, "ZXY");
 	this.color = color;
 	this.debug = debug;
 	this.other = null;
 
-	// forward is normalized; the other two are intentionally not (see their usage below)
-	this.forward = new THREE.Vector3(0, 0, 1);
-	this.up = new THREE.Vector3(0, 1, 0).multiplyScalar(this.radiusY);
-	this.left = new THREE.Vector3(1, 0, 0).multiplyScalar(this.radiusX);
-	var euler = new THREE.Euler(rotation.x, rotation.y, rotation.z, "YXZ");
-	this.forward.applyEuler(euler);
-	this.up.applyEuler(euler);
-	this.left.applyEuler(euler);
+	this.forward = new THREE.Vector3(0, 0, 1).applyEuler(rotation);
+	this.up = new THREE.Vector3(0, 1, 0).applyEuler(rotation);
+	this.left = new THREE.Vector3(1, 0, 0).applyEuler(rotation);
 
+	// manually scale a circle into an ellipse, since the three.js ellipse curves are so hard to use
 	var outerGeometry = new THREE.CircleGeometry(this.radiusX, 100);
-	// manually scale into an ellipse, since the ellipse curves are so hard to use
 	var scale = this.radiusY / this.radiusX;
-	for(var i = 0; i < outerGeometry.vertices.length; i++)
+	for(var i = 0; i < outerGeometry.vertices.length; i++) {
 		outerGeometry.vertices[i].y *= scale;
+		outerGeometry.vertices[i].applyEuler(rotation);
+	}
 
-	outerGeometry.rotateY(rotation.y);
-	outerGeometry.rotateX(rotation.x);
-	outerGeometry.rotateZ(rotation.z);
 	var innerGeometry = outerGeometry.clone().scale(0.9, 0.9, 0.9);
 	outerGeometry.translate(position.x, position.y, position.z);
 	var outerMaterial = new THREE.MeshBasicMaterial({ color: color });
@@ -54,8 +50,15 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	this.sceneInner = new THREE.Scene();
 	this.sceneInner.add(this.inner);
 
-	// mostly just so we can store the FOV setting
-	this.camera = player.camera.clone();
+	// mark which side is the top
+	if(this.debug) {
+		var debugGeometry = new THREE.CircleGeometry(this.radiusX / 10, 16);
+		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color });
+		debugGeometry.translate(0, 1.1 * this.radiusY, 0);
+		for(i = 0; i < debugGeometry.vertices.length; i++) debugGeometry.vertices[i].applyEuler(rotation);
+		debugGeometry.translate(position.x, position.y, position.z);
+		this.sceneOuter.add(new THREE.Mesh(debugGeometry, debugMaterial));
+	}
 
 	// the camera helper was broken when portal recursion was added :(
 	/*if(this.debug) {
@@ -79,47 +82,82 @@ Portal.prototype = {
 	/**
 	 * Returns a camera used for viewing the contents of this portal.
 	 * Must not be called for unlinked portals; be sure to check that a portal is linked first.
-	 * @param camera the camera viewing the portal
+	 * @param source the camera viewing the portal
 	 */
-	getCamera: function(camera) {
+	getCamera: function(source) {
 
-		// in case there was a window resize
-		this.camera.aspect = camera.aspect;
+		var camera = source.clone();
 
+		this.transform(camera);
+
+		// reflect the camera's position across the portal plane
+		// see http://mathworld.wolfram.com/Reflection.html
+		//camera.position.sub(this.other.forward.clone().multiplyScalar(2 * (this.other.forward.dot(camera.position) - this.other.forward.dot(this.other.position))));
+
+		camera.updateProjectionMatrix();
+
+		// set projection matrix to use oblique near clip plane
+		// projection matrix code from http://jsfiddle.net/slayvin/PT32b/
+		// paper explaining this technique: http://www.terathon.com/lengyel/Lengyel-Oblique.pdf
+		var clipPlane = new THREE.Plane();
+		this.forward.negate();
+		clipPlane.setFromNormalAndCoplanarPoint(this.forward, this.position);
+		this.forward.negate();
+		clipPlane.applyMatrix4(camera.matrixWorldInverse);
+
+		clipPlane = new THREE.Vector4(clipPlane.normal.x, clipPlane.normal.y, clipPlane.normal.z, clipPlane.constant);
+
+		var q = new THREE.Vector4();
+		var projectionMatrix = camera.projectionMatrix;
+
+		q.x = (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0];
+		q.y = (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5];
+		q.z = -1.0;
+		q.w = (1.0 + projectionMatrix.elements[10]) / camera.projectionMatrix.elements[14];
+
+		// Calculate the scaled plane vector
+		clipPlane.multiplyScalar(2.0 / clipPlane.dot(q));
+
+		// Replace the third row of the projection matrix
+		projectionMatrix.elements[2] = clipPlane.x;
+		projectionMatrix.elements[6] = clipPlane.y;
+		projectionMatrix.elements[10] = clipPlane.z + 1.0;
+		projectionMatrix.elements[14] = clipPlane.w;
+
+		return camera;
+	},
+
+	/**
+	 * Transform a THREE.Object3D from this space of this portal to the space of its linked portal.
+	 * Must not be called for unlinked portals; be sure to check that a portal is linked first.
+	 * @param object the object to transform
+	 */
+	transform: function(object) {
 		// TODO: consider compiling the below transformation into a matrix so it's fast to reuse when recursing
-		// TODO: it would just need to be updated whenever the player's position changes
-		// TODO: actually, 2 matrices: one for position, one for rotation.
 
 		// get the position
-		this.camera.position.copy(camera.position);
-		this.camera.position.sub(this.position);
-		this.camera.position.applyEuler(new THREE.Euler(-this.rotation.x, -this.rotation.y, -this.rotation.z, "ZXY"));
-		this.camera.position.negate();
-		// TODO: I have no idea why this needs to be inverted, but I experimentally determined that it did
-		// TODO: I'll need to make sure this works for all situations (I think it might actually need refactored by -portal.up)
-		this.camera.position.y *= -1;
-		this.camera.position.applyEuler(new THREE.Euler(this.other.rotation.x, this.other.rotation.y, this.other.rotation.z, "YXZ"));
-		this.camera.position.add(this.other.position);
+		object.position.sub(this.position);
+		object.position.applyEuler(this.antirotation);
+		object.position.x = -object.position.x;
+		object.position.z = -object.position.z;
+		object.position.applyEuler(this.other.rotation);
+		object.position.add(this.other.position);
 
 		// get the rotation
-		this.camera.rotation.copy(camera.rotation);
-		this.camera.rotation.x += this.other.rotation.x - this.rotation.x;
-		this.camera.rotation.y += this.other.rotation.y - this.rotation.y + Math.PI;
-		this.camera.rotation.z += this.other.rotation.z - this.rotation.z;
+		// TODO: this is a terrible way to do this, but I spent hours trying different ways and couldn't do better
+		if(object.rotation.order !== "YXZ") object.rotation.reorder("YXZ");
+		var forward = new THREE.Vector3(0, 0, -1).applyEuler(object.rotation);
+		var up = new THREE.Vector3(0, 1, 0).applyEuler(object.rotation);
+		forward.applyEuler(this.antirotation);
+		up.applyEuler(this.antirotation);
+		forward.x = -forward.x; up.x = -up.x;
+		forward.z = -forward.z; up.z = -up.z;
+		forward.applyEuler(this.other.rotation);
+		up.applyEuler(this.other.rotation);
+		forward.add(object.position);
+		object.up.copy(up);
+		object.lookAt(forward);
 
-		// set the near so that objects behind the portal don't get shown
-		// the near value is set to be as far as possible without its plane intersecting the portal
-		// TODO: this may need revamped when portals are placed on walls
-		this.camera.near = Math.min(
-			this.other.forward.dot(this.other.position.clone().sub(this.camera.position).add(this.left).add(this.up)),
-			this.other.forward.dot(this.other.position.clone().sub(this.camera.position).add(this.left).sub(this.up)),
-			this.other.forward.dot(this.other.position.clone().sub(this.camera.position).sub(this.left).add(this.up)),
-			this.other.forward.dot(this.other.position.clone().sub(this.camera.position).sub(this.left).sub(this.up))
-		);
-		// TODO: instead, return null and use this as an indication that the portal doesn't need to be rendered
-		if(this.camera.near < 0.1) this.camera.near = 0.1;
-		this.camera.updateProjectionMatrix();
-		return this.camera;
 	}
 
 };
