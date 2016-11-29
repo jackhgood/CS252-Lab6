@@ -18,6 +18,7 @@ var Player = function(scene, timestep, debug) {
 	this.width = 0.5;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
+	this.mode = 0; // 0 = player, 1 = edit
 
 	this.scene = scene;
 	this.timestep = timestep;
@@ -156,60 +157,73 @@ Player.prototype = {
 		if((W != S) && (A != D)) speed /= 1.414214;
 
 
-		// get the current velocity, rotated to local space
-		var v = this.body.getLinearVelocity().applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.camera.rotation.y);
+		if(this.mode) { //Edit mode
 
-		// used to compensate for friction direction(s) the player is moving
-		var compZ = this.lastVelocity.z - v.z;
-		//if(A != D) compZ /= 1.414214;
-		var compX = this.lastVelocity.x - v.x;
-		//if(W != S) compX /= 1.414214;
+		}
+		else { // Player Mode
+			// get the current velocity, rotated to local space
+			var v = this.body.getLinearVelocity().applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.camera.rotation.y);
 
-		// apply acceleration
-		if(W && !S) {
-			if(v.z > -speed) {
-				v.z -= acceleration;
-				if(v.z < -speed) v.z = -speed;
-				else v.z += compZ;
+			// used to compensate for friction direction(s) the player is moving
+			var compZ = this.lastVelocity.z - v.z;
+			//if(A != D) compZ /= 1.414214;
+			var compX = this.lastVelocity.x - v.x;
+			//if(W != S) compX /= 1.414214;
+
+			// apply acceleration
+			if (W && !S) {
+				if (v.z > -speed) {
+					v.z -= acceleration;
+					if (v.z < -speed) v.z = -speed;
+					else v.z += compZ;
+				}
 			}
-		}
-		if(S && !W) {
-			if(v.z < speed) {
-				v.z += acceleration;
-				if(v.z > speed) v.z = speed;
-				else v.z += compZ;
+			if (S && !W) {
+				if (v.z < speed) {
+					v.z += acceleration;
+					if (v.z > speed) v.z = speed;
+					else v.z += compZ;
+				}
 			}
-		}
-		if(A && !D) {
-			if(v.x > -speed) {
-				v.x -= acceleration;
-				if(v.x < -speed) v.x = -speed;
-				else v.x += compX;
+			if (A && !D) {
+				if (v.x > -speed) {
+					v.x -= acceleration;
+					if (v.x < -speed) v.x = -speed;
+					else v.x += compX;
+				}
 			}
-		}
-		if(D && !A) {
-			if(v.x < speed) {
-				v.x += acceleration;
-				if(v.x > speed) v.x = speed;
-				else v.x += compX;
+			if (D && !A) {
+				if (v.x < speed) {
+					v.x += acceleration;
+					if (v.x > speed) v.x = speed;
+					else v.x += compX;
+				}
 			}
+
+			this.lastVelocity.copy(v);
+
+			if (W != S) v.z += compZ;
+			if (A != D) v.x += compX;
+
+			// rotate back to world space
+			v.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camera.rotation.y);
+
+			// jump
+			if (keystatus[32]) { // Space
+				keystatus[32] = false;
+				if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
+			}
+
+			this.body.setLinearVelocity(v);
 		}
 
-		this.lastVelocity.copy(v);
 
-		if(W != S) v.z += compZ;
-		if(A != D) v.x += compX;
-
-		// rotate back to world space
-		v.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camera.rotation.y);
-
-		// jump
-		if (keystatus[32]) { // Space
-			keystatus[32] = false;
-			if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
+		// switchmode
+		if (keystatus [77]) {
+			keystatus[77] = false;
+			this.switchModes();
 		}
 
-		this.body.setLinearVelocity(v);
 
 		// update the ground raycaster visualization
 		if(debug) {
@@ -282,6 +296,16 @@ Player.prototype = {
 			this.groundcasterLine.visible = true;
 			this.groundcasterPoint.visible = true;
 		}
+	},
+
+	switchModes: function() {
+		if(this.mode) { // In edit mode
+			this.mode = 0;
+		}
+		else { //In player mode
+			this.mode = 1;
+		}
+
 	}
 
 };
