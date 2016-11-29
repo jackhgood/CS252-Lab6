@@ -32,11 +32,13 @@
 
 		// settings
 		var debug = false; // set to true to show additional things to help with debugging physics & rendering
-		var timestep = 1/90;
+		var timestep = 1/90; // object speed will necessarily be limited to 1/(2*timestep) to prevent traveling through 1-unit thick walls
+		  					 // (unless we can find some way around this) (TODO)
 
 		// other
 		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
 		var keylock = []; // used to keep keys from auto-pressing when held down
+		var keycontrol;
 		var paused = true;
 
 		/**
@@ -46,7 +48,7 @@
 			viewport = document.getElementById("viewport");
 
 			// set up the renderer and add it to the viewport
-			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer = new THREE.WebGLRenderer({ antialias: true/*, logarithmicDepthBuffer: true*/ });
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
 			renderer.shadowMapSoft = true;
@@ -145,6 +147,12 @@
 						if(!keylock[event.keyCode]) {
 							keystatus[event.keyCode] = true;
 							keylock[event.keyCode] = true;
+							keycontrol = event.ctrlKey;
+						}
+						switch(event.keyCode) {
+							case 86: // V
+								if(debug) level.player.toggleThirdPerson();
+								break;
 						}
 					}
 			);
@@ -154,6 +162,7 @@
 					function(event) {
 						keystatus[event.keyCode] = false;
 						keylock[event.keyCode] = false;
+						keycontrol = event.ctrlKey;
 					}
 			);
 
@@ -205,6 +214,11 @@
 					+ Number(level.player.camera.rotation.x).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.y).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.z).toFixed(2) + ")";
+			var dir = new THREE.Vector3(0, 0, 1).applyEuler(level.player.rotation);
+			document.getElementById("debug_playerRotation").innerHTML = "("
+					+ Number(dir.x).toFixed(2) + ", "
+					+ Number(dir.y).toFixed(2) + ", "
+					+ Number(dir.z).toFixed(2) + ")";
 			lastPos.sub(level.player.body.position).divideScalar(timestep);
 			document.getElementById("debug_playerVelocity").innerHTML = "("
 					+ Number(-lastPos.x).toFixed(2) + ", "
@@ -271,6 +285,7 @@
 		<table>
 			<tr><td class="key">Position:</td><td id="debug_playerPosition"></td></tr>
 			<tr><td class="key">Rotation:</td><td id="debug_playerRotation"></td></tr>
+			<tr><td class="key">Direction:</td><td id="debug_playerDirection"></td></tr>
 			<tr><td class="key">Velocity:</td><td id="debug_playerVelocity"></td></tr>
 			<tr><td class="key">Speed:</td><td id="debug_playerSpeed"></td></tr>
 			<tr><td class="key">onGround:</td><td id="debug_playerOnGround"></td></tr>

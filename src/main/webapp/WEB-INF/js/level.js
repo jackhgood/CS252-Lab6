@@ -62,6 +62,8 @@ Level.prototype = {
 
 		// sky
 		var sky = new THREE.Sky();
+		// scale it down so our camera's far doesn't have to be so extreme
+		sky.mesh.geometry.scale(0.01,0.01,0.01);
 		this.scene.add(sky.mesh);
 
 		var inclination = 0.4; // -1 to 1
@@ -106,7 +108,7 @@ Level.prototype = {
 			.4  // restitution
 		);
 		var ground = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(1000, 0.5, 1000),
+			new THREE.CubeGeometry(1000, 1, 1000),
 			ground_material,
 			0 // mass
 		);
@@ -152,8 +154,10 @@ Level.prototype = {
 		cone3.castShadow = cone3.receiveShadow = true;
 		this.scene.add(cone3);
 
-		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(3, 1.5, 0), new THREE.Vector3(0, -Math.PI / 4, 0), 0x0000ff, this.debug);
-		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 1.5, 3), new THREE.Vector3(0, 3*Math.PI / 4, 0), 0xffff00, this.debug);
+		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.501, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.debug);
+		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.debug);
+		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, -Math.PI / 4, 0, "YXZ"), 0x0000ff, this.debug);
+		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 1.5, 2), new THREE.Euler(0, 3*Math.PI / 4, 0, "YXZ"), 0xffff00, this.debug);
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
@@ -240,7 +244,8 @@ Level.prototype = {
 			if(i == linked || !this.portals[i].other) continue;
 			// TODO: it may be wise to add some level of optimization here, such as stopping if a portal is not on-screen. This could yield MASSIVE performance boosts.
 			// recursive call; apply the ith portal's transformation to the camera and go again
-			this.render(renderer, this.portals[i].getCamera(camera), i, n - 1);
+			var cam = this.portals[i].getCamera(camera);
+			if(cam != null) this.render(renderer, cam, i, n - 1);
 		}
 
 	}

@@ -18,6 +18,7 @@ var Player = function(scene, timestep, debug) {
 	this.width = 0.5;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
+	this.mode = 0; // 0 = player, 1 = edit
 
 	this.scene = scene;
 	this.timestep = timestep;
@@ -29,7 +30,7 @@ var Player = function(scene, timestep, debug) {
 		70, // FOV
 		window.innerWidth / window.innerHeight, // aspect ratio
 		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
-		500000 // far (the sky sphere is at 450,000)
+		6000 // far (the skybox is at 450,000, currently scaled by 0.01)
 	);
 	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this
@@ -48,7 +49,7 @@ var Player = function(scene, timestep, debug) {
 		bodyMaterial,
 		0.5 * this.mass
 	);
-	this.body.visible = debug;
+	this.body.visible = false;
 	scene.add(this.body);
 	// lock all rotation, producing a rigid player
 	// must be called after adding to scene, not before
@@ -65,7 +66,7 @@ var Player = function(scene, timestep, debug) {
 		footMaterial,
 		0.5 * this.mass
 	);
-	this.foot.visible = debug;
+	this.foot.visible = false;
 	this.foot.rotateX(Math.PI);
 
 	this.foot.position.set(this.body.position.x, this.body.position.y - 0.525 * this.height, this.body.position.z);
@@ -90,8 +91,10 @@ var Player = function(scene, timestep, debug) {
 	if(debug) {
 		this.groundcasterLine = new THREE.Line(new THREE.Geometry(), new THREE.MeshBasicMaterial({ color: 0x6666ff }));
 		scene.add(this.groundcasterLine);
+		this.groundcasterLine.visible = false;
 		this.groundcasterPoint = new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshBasicMaterial({ color: 0xffff66 }));
 		scene.add(this.groundcasterPoint);
+		this.groundcasterPoint.visible = false;
 	}
 
 	// just for convenience
@@ -100,6 +103,9 @@ var Player = function(scene, timestep, debug) {
 
 	// used to compensate for friction later
 	this.lastVelocity = new THREE.Vector3(0, 0, 0);
+
+	// can be toggled
+	this.thirdPerson = false;
 };
 
 Player.prototype = {
@@ -151,60 +157,73 @@ Player.prototype = {
 		if((W != S) && (A != D)) speed /= 1.414214;
 
 
-		// get the current velocity, rotated to local space
-		var v = this.body.getLinearVelocity().applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.camera.rotation.y);
+		if(this.mode) { //Edit mode
 
-		// used to compensate for friction direction(s) the player is moving
-		var compZ = this.lastVelocity.z - v.z;
-		//if(A != D) compZ /= 1.414214;
-		var compX = this.lastVelocity.x - v.x;
-		//if(W != S) compX /= 1.414214;
+		}
+		else { // Player Mode
+			// get the current velocity, rotated to local space
+			var v = this.body.getLinearVelocity().applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.camera.rotation.y);
 
-		// apply acceleration
-		if(W && !S) {
-			if(v.z > -speed) {
-				v.z -= acceleration;
-				if(v.z < -speed) v.z = -speed;
-				else v.z += compZ;
+			// used to compensate for friction direction(s) the player is moving
+			var compZ = this.lastVelocity.z - v.z;
+			//if(A != D) compZ /= 1.414214;
+			var compX = this.lastVelocity.x - v.x;
+			//if(W != S) compX /= 1.414214;
+
+			// apply acceleration
+			if (W && !S) {
+				if (v.z > -speed) {
+					v.z -= acceleration;
+					if (v.z < -speed) v.z = -speed;
+					else v.z += compZ;
+				}
 			}
-		}
-		if(S && !W) {
-			if(v.z < speed) {
-				v.z += acceleration;
-				if(v.z > speed) v.z = speed;
-				else v.z += compZ;
+			if (S && !W) {
+				if (v.z < speed) {
+					v.z += acceleration;
+					if (v.z > speed) v.z = speed;
+					else v.z += compZ;
+				}
 			}
-		}
-		if(A && !D) {
-			if(v.x > -speed) {
-				v.x -= acceleration;
-				if(v.x < -speed) v.x = -speed;
-				else v.x += compX;
+			if (A && !D) {
+				if (v.x > -speed) {
+					v.x -= acceleration;
+					if (v.x < -speed) v.x = -speed;
+					else v.x += compX;
+				}
 			}
-		}
-		if(D && !A) {
-			if(v.x < speed) {
-				v.x += acceleration;
-				if(v.x > speed) v.x = speed;
-				else v.x += compX;
+			if (D && !A) {
+				if (v.x < speed) {
+					v.x += acceleration;
+					if (v.x > speed) v.x = speed;
+					else v.x += compX;
+				}
 			}
+
+			this.lastVelocity.copy(v);
+
+			if (W != S) v.z += compZ;
+			if (A != D) v.x += compX;
+
+			// rotate back to world space
+			v.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camera.rotation.y);
+
+			// jump
+			if (keystatus[32]) { // Space
+				keystatus[32] = false;
+				if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
+			}
+
+			this.body.setLinearVelocity(v);
 		}
 
-		this.lastVelocity.copy(v);
 
-		if(W != S) v.z += compZ;
-		if(A != D) v.x += compX;
-
-		// rotate back to world space
-		v.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camera.rotation.y);
-
-		// jump
-		if (keystatus[32]) { // Space
-			keystatus[32] = false;
-			if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
+		// switchmode
+		if (keystatus [77]) {
+			keystatus[77] = false;
+			this.switchModes();
 		}
 
-		this.body.setLinearVelocity(v);
 
 		// update the ground raycaster visualization
 		if(debug) {
@@ -242,7 +261,7 @@ Player.prototype = {
 		);
 		// if in debug mode, shift to 3rd person
 		// TODO: maybe add scroll wheel to change camera distance from body
-		if(this.debug) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		if(this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
 	},
 
 	/**
@@ -258,6 +277,35 @@ Player.prototype = {
 		this.foot.__dirtyPosition = true;
 		if(!(typeof rot == "undefined"))
 			this.camera.rotation.copy(rot);
+	},
+
+	/**
+	 * Toggles whether the player is in third person.
+	 */
+	toggleThirdPerson: function() {
+		if(this.thirdPerson) {
+			this.thirdPerson = false;
+			this.body.visible = false;
+			this.foot.visible = false;
+			this.groundcasterLine.visible = false;
+			this.groundcasterPoint.visible = false;
+		} else {
+			this.thirdPerson = true;
+			this.body.visible = true;
+			this.foot.visible = true;
+			this.groundcasterLine.visible = true;
+			this.groundcasterPoint.visible = true;
+		}
+	},
+
+	switchModes: function() {
+		if(this.mode) { // In edit mode
+			this.mode = 0;
+		}
+		else { //In player mode
+			this.mode = 1;
+		}
+
 	}
 
 };
