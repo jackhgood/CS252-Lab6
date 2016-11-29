@@ -1,4 +1,18 @@
 
+var Node = function(x1, y1, z1, size, parent) {
+	this.x = (typeof x1 == "undefined") ? -1024 : x1;
+	this.y = (typeof y1 == "undefined") ? -1024 : y1;
+	this.z = (typeof z1 == "undefined") ? -1024 : z1;
+	this.size = (typeof size == "undefined") ? 2048 : size;
+	this.parent = (typeof parent == "undefined") ? null : parent;
+	this.octants = [];
+};
+
+Node.prototype =
+{
+
+};
+
 /**
  * Constructor for Level.
  * Level represents the world that the game is played in.
