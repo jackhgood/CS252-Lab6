@@ -1,16 +1,116 @@
 
-var Node = function(x1, y1, z1, size, parent) {
-	this.x = (typeof x1 == "undefined") ? -1024 : x1;
-	this.y = (typeof y1 == "undefined") ? -1024 : y1;
-	this.z = (typeof z1 == "undefined") ? -1024 : z1;
-	this.size = (typeof size == "undefined") ? 2048 : size;
+const ORIENTMASK = 15;
+const BLOCKMASK = 15 << 4;
+const SURFACEMASK = 15 << 8;
+
+var BLOCK_ENUM =
+{
+	AIR: 0 << 4,
+	CUBE: 1 << 4,
+	HALF_SLOPE: 2 << 4,
+	CORNER_SLOPE: 3 << 4,
+	INVERSE_CORNER: 4 << 4,
+
+	NO_SURFACE: 0 << 8,
+	PORTAL_SURFACE: 1 << 8,
+	BLACK_SURFACE: 2 << 8,
+}
+
+//This is the node structure for the octree.
+//Our world is 2048x2048x2048 "blocks" in size.
+//This is a nice number since we can just divide
+//the world in halves until we reach a size of 1.
+
+
+var Node = function(centerx, centery, centerz, radius, parent) {
+	this.centerX = (typeof centerx == "undefined") ? 0 : centerx;
+	this.centerY = (typeof centery == "undefined") ? 0 : centery;
+	this.centerZ = (typeof centerz == "undefined") ? 0 : centerz;
+	this.radius = (typeof radius == "undefined") ? 1024 : radius;
 	this.parent = (typeof parent == "undefined") ? null : parent;
 	this.octants = [];
+	this.minSize = 1;
+	this.block = BLOCK_ENUM.AIR | BLOCK_ENUM.NO_SURFACE | 0;
 };
 
 Node.prototype =
 {
+	constructor: Node,
 
+	insertBlock: function(x, y, z, size, surfaceType, blockType, orientation)
+	{
+
+	},
+
+	insertBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
+	{
+
+	},
+
+	getBlock: function(x, y, z)
+	{
+		return
+		{
+			var surfaceType: (this.block & SURFACEMASK) >> 8,
+			var blockType: (this.block & BLOCKMASK) >> 4,
+			var orientation: (this.block & ORIENTMASK)
+		};
+	}
+
+	getOctant: function(x, y, z)
+	{
+
+		if(x >= this.centerX)
+		{
+			if(y >= this.centerY)
+			{
+				if(z >= this.centerZ)
+				{
+					return 0;
+				}
+				else
+				{
+					return 1;
+				}
+			}
+			else
+			{
+				if(z >= this.centerZ)
+				{
+					return 2;
+				}
+				else
+				{
+					return 3;
+				}
+			}
+		}
+		else
+		{
+			if(y >= this.centerY)
+			{
+				if(z >= this.centerZ)
+				{
+					return 4;
+				}
+				else
+				{
+					return 5;
+				}
+			}
+			else
+			{
+				if(z >= this.centerZ)
+				{
+					return 6;
+				}
+				else
+				{
+					return 7;
+				}
+			}
+		}
+	}
 };
 
 /**
