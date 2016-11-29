@@ -34,15 +34,14 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 		outerGeometry.vertices[i].y *= scale;
 		outerGeometry.vertices[i].applyEuler(rotation);
 	}
+	var material = new THREE.MeshBasicMaterial({ color: color, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -3 });
 
 	var innerGeometry = outerGeometry.clone().scale(0.9, 0.9, 0.9);
 	outerGeometry.translate(position.x, position.y, position.z);
-	var outerMaterial = new THREE.MeshBasicMaterial({ color: color });
-	this.outer = new THREE.Mesh(outerGeometry, outerMaterial);
+	this.outer = new THREE.Mesh(outerGeometry, material);
 
 	innerGeometry.translate(position.x, position.y, position.z);
-	var innerMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
-	this.inner = new THREE.Mesh(innerGeometry, innerMaterial);
+	this.inner = new THREE.Mesh(innerGeometry, material);
 
 	// each stage is rendered separately with the stencil buffer, so it gets its own scene
 	this.sceneOuter = new THREE.Scene();
@@ -53,7 +52,7 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	// mark which side is the top
 	if(this.debug) {
 		var debugGeometry = new THREE.CircleGeometry(this.radiusX / 10, 16);
-		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color });
+		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -3 });
 		debugGeometry.translate(0, 1.1 * this.radiusY, 0);
 		for(i = 0; i < debugGeometry.vertices.length; i++) debugGeometry.vertices[i].applyEuler(rotation);
 		debugGeometry.translate(position.x, position.y, position.z);

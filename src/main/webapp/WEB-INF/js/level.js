@@ -28,7 +28,7 @@ Level.prototype = {
 		// TODO: or it could actually load a level from the DB designated as the official default base
 		return {
 			playerPosition: new THREE.Vector3(0, 10, 0),
-			playerRotation: new THREE.Euler(-Math.PI / 4, 0, 0, "YXZ")
+			playerRotation: new THREE.Euler(0, 0, 0, "YXZ")
 		};
 	},
 
@@ -49,8 +49,10 @@ Level.prototype = {
 		// sky
 		var sky = new THREE.Sky();
 		// scale it down so our camera's far doesn't have to be so extreme
-		sky.mesh.geometry.scale(0.01,0.01,0.01);
-		this.scene.add(sky.mesh);
+		sky.mesh.geometry.scale(0.00001,0.00001,0.00001);
+		this.skyScene = new THREE.Scene();
+		this.skyScene.add(sky.mesh);
+		this.skyCamera = this.player.camera.clone();
 
 		var inclination = 0.4; // -1 to 1
 		var azimuth = 0.25;
@@ -66,8 +68,8 @@ Level.prototype = {
 		// TODO: lighting is kind of arbitrary at the moment. Ideally it would be given a saveable setting
 		// lighting
 		this.scene.add(new THREE.AmbientLight(0x404040));
-		// TODO: toy with the possibility of yellowish light to simulate sunlight
-		// TODO: Godrays?!?!??!
+		// TODO: toy with the possibility of yellowish light to simulate sunlight, depending on time of day
+		// TODO: Godrays?!?!??! no, probably not :(
 		var light = new THREE.DirectionalLight(0xffffff);
 		light.position.copy(sky.uniforms.sunPosition.value).multiplyScalar(50);
 		light.target.position.copy(this.scene.position);
@@ -140,10 +142,10 @@ Level.prototype = {
 		cone3.castShadow = cone3.receiveShadow = true;
 		this.scene.add(cone3);
 
-		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.501, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.debug);
+		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.debug);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.debug);
-		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, -Math.PI / 4, 0, "YXZ"), 0x0000ff, this.debug);
-		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 1.5, 2), new THREE.Euler(0, 3*Math.PI / 4, 0, "YXZ"), 0xffff00, this.debug);
+		//this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, -Math.PI / 4, 0, "YXZ"), 0x0000ff, this.debug);
+		//this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 1.5, 2), new THREE.Euler(0, 3*Math.PI / 4, 0, "YXZ"), 0xffff00, this.debug);
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
@@ -189,6 +191,10 @@ Level.prototype = {
 		}
 
 		// render the world
+		gl.disable(gl.DEPTH_TEST);
+		this.skyCamera.rotation.copy(this.player.camera.rotation);
+		renderer.render(this.skyScene, this.skyCamera);
+		gl.enable(gl.DEPTH_TEST);
 		renderer.render(this.scene, camera);
 
 		// end of recursion

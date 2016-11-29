@@ -29,7 +29,7 @@ var Player = function(scene, timestep, debug) {
 		70, // FOV
 		window.innerWidth / window.innerHeight, // aspect ratio
 		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
-		6000 // far (the skybox is at 450,000, currently scaled by 0.01)
+		1000 // far (the skybox is at 450,000, currently scaled by 0.005)
 	);
 	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this

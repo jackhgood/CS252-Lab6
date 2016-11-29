@@ -31,7 +31,7 @@
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = false; // set to true to show additional things to help with debugging physics & rendering
+		var debug = true; // set to true to show additional things to help with debugging physics & rendering
 		var timestep = 1/90; // object speed will necessarily be limited to 1/(2*timestep) to prevent traveling through 1-unit thick walls
 		  					 // (unless we can find some way around this) (TODO)
 
@@ -47,7 +47,7 @@
 			viewport = document.getElementById("viewport");
 
 			// set up the renderer and add it to the viewport
-			renderer = new THREE.WebGLRenderer({ antialias: true/*, logarithmicDepthBuffer: true*/ });
+			renderer = new THREE.WebGLRenderer({ antialias: true, sortObjects: false/*, logarithmicDepthBuffer: true*/ });
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
 			renderer.shadowMapSoft = true;
@@ -211,8 +211,8 @@
 					+ Number(level.player.camera.rotation.x).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.y).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.z).toFixed(2) + ")";
-			var dir = new THREE.Vector3(0, 0, 1).applyEuler(level.player.rotation);
-			document.getElementById("debug_playerRotation").innerHTML = "("
+			var dir = new THREE.Vector3(0, 0, 1).applyEuler(level.player.camera.rotation);
+			document.getElementById("debug_playerDirection").innerHTML = "("
 					+ Number(dir.x).toFixed(2) + ", "
 					+ Number(dir.y).toFixed(2) + ", "
 					+ Number(dir.z).toFixed(2) + ")";
@@ -236,6 +236,7 @@
 			renderer.clear();
 			requestAnimationFrame(render);
 			var gl = renderer.context;
+			// TODO: have a graphics option that does not enable stencil testing, for users without a graphics card
 			gl.enable(gl.STENCIL_TEST);
 			level.render(renderer, level.player.camera, -1, 12);
 			gl.disable(gl.STENCIL_TEST);
