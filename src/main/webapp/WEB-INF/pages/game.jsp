@@ -38,6 +38,7 @@
 		// other
 		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
 		var keylock = []; // used to keep keys from auto-pressing when held down
+		var keycontrol;
 		var paused = true;
 
 		/**
@@ -146,6 +147,7 @@
 						if(!keylock[event.keyCode]) {
 							keystatus[event.keyCode] = true;
 							keylock[event.keyCode] = true;
+							keycontrol = event.ctrlKey;
 						}
 						switch(event.keyCode) {
 							case 86: // V
@@ -160,6 +162,7 @@
 					function(event) {
 						keystatus[event.keyCode] = false;
 						keylock[event.keyCode] = false;
+						keycontrol = event.ctrlKey;
 					}
 			);
 
