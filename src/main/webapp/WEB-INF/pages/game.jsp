@@ -51,6 +51,7 @@
 			renderer = new THREE.WebGLRenderer({ antialias: true, sortObjects: false/*, logarithmicDepthBuffer: true*/ });
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.autoUpdate = false;
 			renderer.shadowMapSoft = true;
 			renderer.autoClear = false;
 			viewport.appendChild(renderer.domElement);
@@ -196,7 +197,7 @@
 		 * Used to trigger player's change of position as result of controls input.
 		 */
 		gameUpdate = function() {
-			level.player.update(keystatus);
+			level.update(keystatus);
 		};
 
 		/**
@@ -214,7 +215,7 @@
 					+ Number(level.player.camera.rotation.x).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.y).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.z).toFixed(2) + ")";
-			var dir = new THREE.Vector3(0, 0, 1).applyEuler(level.player.camera.rotation);
+			var dir = new THREE.Vector3(0, 0, -1).applyEuler(level.player.camera.rotation);
 			document.getElementById("debug_playerDirection").innerHTML = "("
 					+ Number(dir.x).toFixed(2) + ", "
 					+ Number(dir.y).toFixed(2) + ", "
@@ -235,13 +236,13 @@
 		 */
 		render = function() {
 			// TODO: special portal rendering will likely go here
-			level.player.prepCamera();
 			renderer.clear();
 			requestAnimationFrame(render);
 			var gl = renderer.context;
 			// TODO: have a graphics option that does not enable stencil testing, for users without a graphics card
+			if(level.player.thirdPerson) level.player.prepCamera();
 			gl.enable(gl.STENCIL_TEST);
-			level.render(renderer, level.player.camera, -1, 12);
+			level.render(renderer, level.player.camera, -1, 5);
 			gl.disable(gl.STENCIL_TEST);
 			if(debug) render_stats.update();
 		};

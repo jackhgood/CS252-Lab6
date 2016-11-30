@@ -14,7 +14,7 @@ var Player = function(scene, timestep, debug) {
 	this.airAcceleration = 1;
 	this.jumpVelocity = 12;
 	this.mouseSensitivity = 0.004;
-	this.height = 1.8;
+	this.height = 1.6;
 	this.width = 0.5;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
@@ -157,7 +157,7 @@ Player.prototype = {
 		if((W != S) && (A != D)) speed /= 1.414214;
 
 
-		if(this.mode) { //Edit mode
+		if(this.mode == 1) { // Edit mode
 
 		}
 		else { // Player Mode
@@ -253,21 +253,23 @@ Player.prototype = {
 	 * Must be called each time this camera is being used to render a scene.
 	 */
 	prepCamera: function() {
-		// move the camera to follow the body
-		this.camera.position.set(
-			this.body.position.x,
-			this.body.position.y + 0.25 * this.height,
-			this.body.position.z
-		);
-		// if in debug mode, shift to 3rd person
-		// TODO: maybe add scroll wheel to change camera distance from body
-		if(this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		if(this.mode == 0) {
+			// move the camera to follow the body
+			this.camera.position.set(
+				this.body.position.x,
+				this.body.position.y + 0.25 * this.height,
+				this.body.position.z
+			);
+			// if in debug mode, shift to 3rd person
+			// TODO: maybe add scroll wheel to change camera distance from body
+			if (this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		}
 	},
 
 	/**
 	 * Sets the player's position and rotation.
 	 * @param pos the desired THREE.Vector3 position
-	 * @param rot the desired THREE.Vector3 position
+	 * @param rot the desired THREE.Vector3 rotation
 	 */
 	set: function(pos, rot) {
 		var footoffs = this.foot.position.sub(this.body.position);
@@ -277,6 +279,10 @@ Player.prototype = {
 		this.foot.__dirtyPosition = true;
 		if(!(typeof rot == "undefined"))
 			this.camera.rotation.copy(rot);
+	},
+
+	setFromCamera: function() {
+		this.set(new THREE.Vector3(0, -0.25 * this.height, 0).add(this.camera.position));
 	},
 
 	/**

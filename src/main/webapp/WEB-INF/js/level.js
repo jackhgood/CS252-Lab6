@@ -27,6 +27,8 @@ var Level = function(data, timestep, debug) {
 	this.timestep = (typeof timestep == "undefined") ? 1 / 60: timestep;
 	this.debug = (typeof debug == "undefined") ? false : debug;
 	this.portals = [];
+	// used for detecting passing through a portal
+	this.playerPortalValues = [];
 };
 
 Level.prototype = {
@@ -158,12 +160,37 @@ Level.prototype = {
 
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.debug);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.debug);
-		//this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, -Math.PI / 4, 0, "YXZ"), 0x0000ff, this.debug);
-		//this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 1.5, 2), new THREE.Euler(0, 3*Math.PI / 4, 0, "YXZ"), 0xffff00, this.debug);
+		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, Math.PI / 2, 0, "YXZ"), 0x0000ff, this.debug);
+		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 10*1.5, 2), new THREE.Euler(0, 0, 0, "YXZ"), 0xffff00, this.debug);
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
 		return this.scene;
+	},
+
+	update: function(keystatus) {
+		this.player.update(keystatus);
+		this.player.prepCamera();
+		for(var i = 0; i < this.portals.length; i++) {
+			// the dot product of the portal's normal with the vector to the player's position
+			var playerToPortal = this.player.camera.position.clone().sub(this.portals[i].position);
+			var product = playerToPortal.dot(this.portals[i].forward);
+			// when it changes sign, you have passed the portal's plane
+			if(product < 0 && this.playerPortalValues[i] > 0) {
+				// check to make sure we are close enough to the portal
+				var x = playerToPortal.dot(this.portals[i].left) / this.portals[i].radiusX;
+				var y = playerToPortal.dot(this.portals[i].up) / this.portals[i].radiusY;
+				if(x*x + y*y < 1) {
+					this.portals[i].transform(this.player.camera);
+					this.player.setFromCamera();
+					this.player.body.setLinearVelocity(this.portals[i].transform(this.player.body.getLinearVelocity()));
+					this.player.foot.setLinearVelocity(this.portals[i].transform(this.player.foot.getLinearVelocity()));
+					for (var j = 0; j < this.portals.length; j++) this.playerPortalValues[j] = 0;
+					break;
+				}
+			}
+			this.playerPortalValues[i] = product;
+		}
 	},
 
 	/**
@@ -206,9 +233,10 @@ Level.prototype = {
 
 		// render the world
 		gl.disable(gl.DEPTH_TEST);
-		this.skyCamera.rotation.copy(this.player.camera.rotation);
+		this.skyCamera.rotation.copy(camera.rotation);
 		renderer.render(this.skyScene, this.skyCamera);
 		gl.enable(gl.DEPTH_TEST);
+		if(portal < 0) renderer.shadowMap.needsUpdate = true;
 		renderer.render(this.scene, camera);
 
 		// end of recursion
@@ -236,7 +264,6 @@ Level.prototype = {
 
 		// do not modify the stencil buffer
 		gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-		// render only to pixels in the body of the current portal
 		gl.stencilFunc(gl.EQUAL, comparator, 0xff);
 		for(i = 0; i < this.portals.length; i++) {
 			if(i == linked) continue;
@@ -245,7 +272,7 @@ Level.prototype = {
 		}
 
 		// reset depth so that all items viewed through a portal get drawn
-		gl.clear(gl.DEPTH_BUFFER_BIT);
+		renderer.clearDepth();
 		for(i = 0; i < this.portals.length; i++) {
 			if(i == linked || !this.portals[i].other) continue;
 			// TODO: it may be wise to add some level of optimization here, such as stopping if a portal is not on-screen. This could yield MASSIVE performance boosts.
