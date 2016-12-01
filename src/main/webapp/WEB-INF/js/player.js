@@ -19,6 +19,7 @@ var Player = function(scene, timestep, debug) {
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
 	this.mode = 0; // 0 = player, 1 = edit
+	this.diam = 5;
 
 	this.scene = scene;
 	this.timestep = timestep;
@@ -84,6 +85,15 @@ var Player = function(scene, timestep, debug) {
 	// bind the body parts together
 	var constraint = new Physijs.DOFConstraint(this.foot, this.body, this.foot.position);
 	scene.addConstraint(constraint);
+
+
+	var selectionbox = new THREE.BoxGeometry(1.05,1.05,1.05);
+	var selectionedge = new THREE.EdgesGeometry(selectionbox);
+	var selectionmaterial = new THREE.LineBasicMaterial( { color: 0x32cd32, linewidth: 2 } );
+	this.selection = new THREE.LineSegments( selectionedge, selectionmaterial );
+	this.selection.position.set(10, 10, 10);
+	scene.add(this.selection);
+
 
 	// initialize a special short-range raycaster that determines whether the player is on the ground
 	this.onGround = false;
@@ -163,7 +173,18 @@ Player.prototype = {
 
 
 		if(this.mode == 1) { // Edit mode
-
+			if (W && !S) {
+				this.camera.translateZ(-speed*timestep);
+			}
+			if (S && !W) {
+				this.camera.translateZ(speed*timestep);
+			}
+			if (A && !D) {
+				this.camera.translateX(-speed*timestep);
+			}
+			if (D && !A) {
+				this.camera.translateX(speed*timestep);
+			}
 		}
 		else { // Player Mode
 			// get the current velocity, rotated to local space
@@ -287,7 +308,9 @@ Player.prototype = {
 	},
 
 	setFromCamera: function() {
-		this.set(new THREE.Vector3(0, -0.25 * this.height, 0).add(this.camera.position));
+		if(!this.mode) {
+			this.set(new THREE.Vector3(0, -0.25 * this.height, 0).add(this.camera.position));
+		}
 	},
 
 	/**
