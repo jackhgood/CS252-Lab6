@@ -5,10 +5,10 @@
  * @param position vector of the location of the center of the portal
  * @param rotation the THREE.Euler rotation
  * @param color the color of the portal
- * @param debug whether to render in debug mode
+ * @param settings the gameplay settings
  * @constructor
  */
-var Portal = function(scene, player, position, rotation, color, debug) {
+var Portal = function(scene, player, position, rotation, color, settings) {
 
 	// general portal settings
 	this.radiusX = 0.5;
@@ -22,7 +22,7 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	this.antirotation = new THREE.Euler(-rotation.x, -rotation.y, -rotation.z, "ZXY");
 	this.color = color;
 	this.offset = 2 * player.camera.near;
-	this.debug = debug;
+	this.settings = settings;
 	this.other = null;
 
 	this.forward = new THREE.Vector3(0, 0, 1).applyEuler(rotation);
@@ -55,7 +55,7 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	this.position.add(this.forward.clone().multiplyScalar(this.offset));
 
 	// mark which side is the top
-	if(this.debug) {
+	if(this.settings.debug) {
 		var debugGeometry = new THREE.CircleGeometry(this.radiusX / 10, 16);
 		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -3 });
 		debugGeometry.translate(0, 1.1 * this.radiusY, 0);
@@ -65,7 +65,7 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	}
 
 	// the camera helper was broken when portal recursion was added :(
-	/*if(this.debug) {
+	/*if(this.settings.debug) {
 		this.helper = new THREE.CameraHelper(this.camera);
 		scene.add(this.helper);
 	}*/

@@ -31,7 +31,13 @@
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = true; // set to true to show additional things to help with debugging physics & rendering
+		var settings = {
+			// generally, 0 is low quality, 1 is medium, 2 is high
+			debug: false, // set to true to show additional things to help with debugging physics & rendering
+			shadowQuality: 2,
+			portalQuality: 2,
+			portalRecursions: 5
+		};
 		var timestep = 1/90; // object speed will necessarily be limited to 1/(2*timestep) to prevent traveling through 1-unit thick walls
 		  					 // (unless we can find some way around this) (TODO)
 
@@ -56,7 +62,7 @@
 			renderer.autoClear = false;
 			viewport.appendChild(renderer.domElement);
 
-			if(debug) {
+			if(settings.debug) {
 				// set up the fps counter for rendering and add it to the viewport
 				render_stats = new Stats();
 				render_stats.domElement.style.position = "absolute";
@@ -152,7 +158,7 @@
 						}
 						switch(event.keyCode) {
 							case 86: // V
-								if(debug) level.player.toggleThirdPerson();
+								if(settings.debug) level.player.toggleThirdPerson();
 								break;
 						}
 					}
@@ -241,10 +247,18 @@
 			var gl = renderer.context;
 			// TODO: have a graphics option that does not enable stencil testing, for users without a graphics card
 			if(level.player.thirdPerson) level.player.prepCamera();
-			gl.enable(gl.STENCIL_TEST);
-			level.render(renderer, level.player.camera, -1, 5);
-			gl.disable(gl.STENCIL_TEST);
-			if(debug) render_stats.update();
+			if(settings.portalQuality == 0) {
+				level.render(renderer, level.player.camera, -1, 0);
+			} else if(settings.portalQuality == 1) {
+				// TODO: implement medium portal settings with canvas texture
+
+			} else if(settings.portalQuality == 2) {
+				gl.enable(gl.STENCIL_TEST);
+				level.render(renderer, level.player.camera, -1, settings.portalRecursions);
+				gl.disable(gl.STENCIL_TEST);
+			}
+
+			if(settings.debug) render_stats.update();
 		};
 
 		/**
@@ -253,7 +267,7 @@
 		 */
 		startLevel = function () {
 			// load the level and initialize the scene
-			level = new Level(undefined, timestep, debug);
+			level = new Level(undefined, timestep, settings);
 			level.constructScene().addEventListener(
 					"update",
 					function() {
@@ -261,7 +275,7 @@
 						if(!paused) {
 							gameUpdate();
 							level.scene.simulate(undefined, 2);
-							if(debug) {
+							if(settings.debug) {
 								physics_stats.update();
 								debugUpdate();
 							}

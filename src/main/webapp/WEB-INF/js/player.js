@@ -3,10 +3,10 @@
  * Adds the camera and player physics objects to the scene.
  * @param scene the Physijs.scene the player will belong to
  * @param timestep the expected time between physics simulations
- * @param debug whether to display the player in debug mode (default false)
+ * @param settings the gameplay settings
  * @constructor
  */
-var Player = function(scene, timestep, debug) {
+var Player = function(scene, timestep, settings) {
 
 	// general player settings
 	this.speed = 5;
@@ -22,7 +22,7 @@ var Player = function(scene, timestep, debug) {
 
 	this.scene = scene;
 	this.timestep = timestep;
-	this.debug = (typeof debug == "undefined") ? false : debug;
+	this.settings = settings;
 	// TODO: we may have to scale the world before rendering or something so near and far aren't such a huge gap
 	// TODO: perhaps make the sky part of a separate scene, render it first with high far, then adjust it down?
 	// TODO: or just scale down the scene with the sky in it?
@@ -89,7 +89,7 @@ var Player = function(scene, timestep, debug) {
 	this.onGround = false;
 	this.groundcaster = new THREE.Raycaster();
 	this.groundcaster.far = 0.2 * this.height;
-	if(debug) {
+	if(settings.debug) {
 		this.groundcasterLine = new THREE.Line(new THREE.Geometry(), new THREE.MeshBasicMaterial({ color: 0x6666ff }));
 		scene.add(this.groundcasterLine);
 		this.groundcasterLine.visible = false;
@@ -124,7 +124,7 @@ Player.prototype = {
 		var intersects = this.groundcaster.intersectObjects(this.scene.children);
 		for(var i = 0; i < intersects.length; i++) {
 			if(!(intersects[i].object == this.foot || intersects[i].object == this.body
-				|| (debug && (intersects[i].object == this.groundcasterLine || intersects[i].object == this.groundcasterPoint)))) {
+				|| (this.settings.debug && (intersects[i].object == this.groundcasterLine || intersects[i].object == this.groundcasterPoint)))) {
 				this.onGround = true;
 				break;
 			}
@@ -231,7 +231,7 @@ Player.prototype = {
 
 
 		// update the ground raycaster visualization
-		if(debug) {
+		if(this.settings.debug) {
 			var geo = new THREE.Geometry();
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.near, 0).add(this.foot.position));
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
