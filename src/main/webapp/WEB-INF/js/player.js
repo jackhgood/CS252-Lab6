@@ -77,6 +77,7 @@ var Player = function(scene, timestep, debug) {
 		}
 	);
 	scene.add(this.foot);
+	this.foot._physijs.collision_flags = 4;
 	// if you are reading this and want to have some fun, comment out the next line and set debug to true in game.jsp
 	this.foot.setAngularFactor(new THREE.Vector3(0, 0, 0));
 
@@ -143,13 +144,17 @@ Player.prototype = {
 		// TODO: get rid of this when done testing
 		if(keystatus[16]) // Shift
 			speed *= 10;
-		//
-		// // constants to compensate for friction
-		// // these were determined experimentally
-		// if(this.onGround) {
-		// 	speed += 0.8 * this.friction;
-		// 	acceleration += 0.6 * this.friction;
-		// }
+
+		// compensate for portals messing up z-rotation
+		// TODO: this could use some improvement
+		var adjust = 0.04;
+		if(this.camera.rotation.z > 0) {
+			this.camera.rotation.z -= adjust;
+			if(this.camera.rotation.z < 0) this.camera.rotation.z = 0
+		} else if(this.camera.rotation.z < 0) {
+			this.camera.rotation.z += adjust;
+			if(this.camera.rotation.z > 0) this.camera.rotation.z = 0
+		}
 
 		// accelaration is multiplied by sqrt(2) to account for the fact that the body is only half the player's mass,
 		// but not if moving diagonally (to prevent increased player speed on the diagonal)

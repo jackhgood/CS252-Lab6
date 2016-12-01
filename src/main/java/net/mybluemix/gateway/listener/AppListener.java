@@ -1,5 +1,5 @@
 
-package com.example.project.listener;
+package net.mybluemix.gateway.listener;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -11,7 +11,7 @@ public class AppListener implements ServletContextListener {
 
     /**
      * Populates the dataSource in a servlet context.
-     * @param sce
+     * @param sce the servlet context event
      */
     @Override
 	public void contextInitialized(ServletContextEvent sce) {

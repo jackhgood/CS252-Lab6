@@ -4,7 +4,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Main Page</title>
+    <title>Gateway</title>
 
     <script type='text/javascript' src="<c:url value="/webjars/jquery/1.9.1/jquery.js" />"></script>
 

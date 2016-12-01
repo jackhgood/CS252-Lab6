@@ -1,5 +1,5 @@
 applications:
-- path: target/SpringMVCTest.war
+- path: target/Gateway.war
   memory: 512M
   instances: 1
   domain: mybluemix.net

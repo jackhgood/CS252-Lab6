@@ -1,4 +1,4 @@
-package com.example.project.controller;
+package net.mybluemix.gateway.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -24,7 +24,7 @@ public class MainController {
      * Displays the main menu page.
      * @return the name of the jsp to display
      */
-	@RequestMapping("")
+	@RequestMapping("/play")
 	public String home(HttpServletRequest request, Model model) {
 		return "game";
 	}

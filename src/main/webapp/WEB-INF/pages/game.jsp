@@ -4,7 +4,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>The Game</title>
+	<title>Gateway</title>
 
 	<link rel="stylesheet" href="<c:url value='/css/main.css' />" />
 	<link rel="stylesheet" type="text/css" href="<c:url value='/css/game.css' />" />

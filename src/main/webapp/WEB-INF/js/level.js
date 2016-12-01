@@ -70,6 +70,9 @@ Level.prototype = {
 		this.skyScene.add(sky.mesh);
 		this.skyCamera = this.player.camera.clone();
 
+		// now that the camera is cloned, move it to the boy
+		this.player.prepCamera();
+
 		var inclination = 0.4; // -1 to 1
 		var azimuth = 0.25;
 		sky.uniforms.turbidity.value = 10;
@@ -161,7 +164,7 @@ Level.prototype = {
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.debug);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.debug);
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, Math.PI / 2, 0, "YXZ"), 0x0000ff, this.debug);
-		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 10*1.5, 2), new THREE.Euler(0, 0, 0, "YXZ"), 0xffff00, this.debug);
+		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 10*1.5, 2), new THREE.Euler(Math.PI / 2, 0, 0, "YXZ"), 0xffff00, this.debug);
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
