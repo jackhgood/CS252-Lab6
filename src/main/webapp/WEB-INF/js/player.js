@@ -108,6 +108,11 @@ var Player = function(scene, timestep, settings) {
 		this.groundcasterPoint.visible = false;
 	}
 
+	// the raycaster used for shooting portals
+	this.raycaster = new THREE.Raycaster();
+	this.raycaster.near = this.camera.near;
+	this.raycaster.far = this.camera.far;
+
 	// just for convenience
 	this.HALF_PI = Math.PI / 2;
 	this.TWO_PI = 2 * Math.PI;
@@ -258,6 +263,20 @@ Player.prototype = {
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
 			this.groundcasterLine.geometry = geo;
 			this.groundcasterPoint.position.copy(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
+		}
+	},
+
+	/**
+	 * Handles click events when controlling the player.
+	 * @param button the mouse button (usually 1 for left or 2 for right)
+	 */
+	click: function(button) {
+		if(!this.mode) {
+			this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+			var intersects = this.raycaster.intersectObjects(this.scene.children);
+			if(intersects[0]) {
+
+			}
 		}
 	},
 

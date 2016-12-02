@@ -90,20 +90,22 @@
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
 					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
-						document.getElementById("pauseOverlay").style.display = "none";
+						// unpause
+						element.style.display = "none";
 						paused = false;
 						level.scene.onSimulationResume();
 						level.scene.simulate();
 					} else {
-						// TODO: apparently this doesn't work in Firefox. I need to find a different way to center content
-						document.getElementById("pauseOverlay").style.display = "block";
+						// pause
+						graphicsMenu.style.display = "none";
+						graphicsMenuDropdown.innerHTML = "&#9654 Graphics Settings";
+						element.style.display = "block";
 						paused = true;
 					}
 				};
 
 				var pointerlockerror = function(event) {
 					// TODO: I'm not sure what would actually trigger this, but it should be figured out and handled
-					alert("pointerlock error!");
 				};
 
 				document.addEventListener("pointerlockchange", pointerlockchange);
@@ -184,6 +186,15 @@
 					}
 			);
 
+			document.addEventListener(
+					"click",
+					function(event) {
+						if(!paused) {
+							level.player.click(1);
+						}
+					}
+			);
+
 			window.addEventListener(
 					"resize",
 					function(event) {
@@ -192,6 +203,65 @@
 						renderer.setSize(window.innerWidth, window.innerHeight);
 					}
 			);
+
+			// graphics menu event handlers
+			var graphicsMenu = document.getElementById("graphicsMenu");
+			var graphicsMenuDropdown = document.getElementById("graphicsMenuDropdown");
+
+			graphicsMenuDropdown.addEventListener(
+					"click",
+					function(event) {
+						event.stopPropagation();
+						if(graphicsMenu.style.display == "none") {
+							graphicsMenu.style.display = "block";
+							graphicsMenuDropdown.innerHTML = "&#9660 Graphics Settings";
+						} else {
+							graphicsMenu.style.display = "none";
+							graphicsMenuDropdown.innerHTML = "&#9654 Graphics Settings";
+						}
+					}
+			);
+
+			graphicsMenu.addEventListener(
+					"click",
+					function(event) {
+						event.stopPropagation();
+					}
+			);
+
+			document.getElementById("graphicsApplyButton").addEventListener(
+					"click",
+					function(event) {
+						// read the settings from the graphics form and update them
+						if(document.getElementById("shadowButton0").checked) {
+							settings.shadowQuality = 0;
+						} else
+						if(document.getElementById("shadowButton1").checked) {
+							settings.shadowQuality = 1;
+						} else
+						if(document.getElementById("shadowButton2").checked) {
+							settings.shadowQuality = 2;
+						}
+						if(document.getElementById("portalButton0").checked) {
+							settings.portalQuality = 0;
+						} else
+						if(document.getElementById("portalButton1").checked) {
+							settings.portalQuality = 1;
+						} else
+						if(document.getElementById("portalButton2").checked) {
+							settings.portalQuality = 2;
+						}
+						settings.portalRecursions = document.getElementById("portalRecursionsSlider").value;
+
+						level.updateSettings();
+					}
+			);
+
+			// set initial values
+			document.getElementById("shadowButton" + settings.shadowQuality).checked = true;
+			document.getElementById("portalButton" + settings.portalQuality).checked = true;
+			document.getElementById("portalRecursionsSlider").value = settings.portalRecursions;
+			document.getElementById("portalRecursionsValue").innerHTML = settings.portalRecursions.toString();
 
 			// begin
 			startLevel();
@@ -330,6 +400,22 @@
 					</td>
 				</tr>
 			</table>
+			<div id="graphicsMenuDropdown">&#9654 Graphics Settings</div>
+			<div id="graphicsMenu">
+				Shadow Quality <br />
+				<input id="shadowButton0" type="radio" name="shadow"> None <br />
+				<input id="shadowButton1" type="radio" name="shadow"> Low <br />
+				<input id="shadowButton2" type="radio" name="shadow"> High <br />
+				Portal Quality <br />
+				<input id="portalButton0" type="radio" name="portal"> Low <br />
+				<input id="portalButton1" type="radio" name="portal"> Medium <br />
+				<input id="portalButton2" type="radio" name="portal"> High (GPU Recommended) <br />
+				Portal Visual Recursions: <span id="portalRecursionsValue"></span> <br />
+				<input id="portalRecursionsSlider" type="range" min="1" max="16" step="1"
+					   onchange="document.getElementById('portalRecursionsValue').innerHTML = this.value;" /> <br />
+				<button id="graphicsApplyButton">Apply</button>
+
+			</div>
 		</div>
 	</div>
 </div>

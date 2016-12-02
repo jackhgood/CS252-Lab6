@@ -3,8 +3,6 @@ package net.mybluemix.gateway.listener;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
-import com.mongodb.connection.SslSettings;
-import com.mongodb.connection.netty.NettyStreamFactoryFactory;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;

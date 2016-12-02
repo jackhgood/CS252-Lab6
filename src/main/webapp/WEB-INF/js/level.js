@@ -89,29 +89,22 @@ Level.prototype = {
 		this.scene.add(new THREE.AmbientLight(0x404040));
 		// TODO: toy with the possibility of yellowish light to simulate sunlight, depending on time of day
 		// TODO: Godrays?!?!??! no, probably not :(
-		var light = new THREE.DirectionalLight(0xffffff);
-		light.position.copy(sky.uniforms.sunPosition.value).multiplyScalar(50);
-		light.target.position.copy(this.scene.position);
-		light.intensity = 1;
-		if(settings.shadowQuality > 0) {
-			light.castShadow = true;
-			// TODO: these settings need some massive tweaking and will depend on level size
-			light.shadow.camera.left = -60;
-			light.shadow.camera.top = -60;
-			light.shadow.camera.right = 60;
-			light.shadow.camera.bottom = 60;
-			light.shadow.camera.near = 20;
-			light.shadow.camera.far = 200;
-			if(settings.shadowQuality == 1) {
-				light.shadow.bias = -.005;
-				light.shadow.mapSize.height = light.shadow.mapSize.width = 1024;
-			} else if(settings.shadowQuality > 1) {
-				light.shadow.bias = -.003;
-				light.shadow.mapSize.height = light.shadow.mapSize.width = 4096;
-			}
-			if (this.settings.debug) this.scene.add(new THREE.CameraHelper(light.shadow.camera));
-		}
-		this.scene.add(light);
+		this.light = new THREE.DirectionalLight(0xffffff);
+		this.light.position.copy(sky.uniforms.sunPosition.value).multiplyScalar(50);
+		this.light.target.position.copy(this.scene.position);
+		this.light.intensity = 1;
+		// TODO: these settings will depend on level size
+		// TODO: maybe make shadow cam follow player?
+		this.light.shadow.camera.left = -60;
+		this.light.shadow.camera.top = -60;
+		this.light.shadow.camera.right = 60;
+		this.light.shadow.camera.bottom = 60;
+		this.light.shadow.camera.near = 20;
+		this.light.shadow.camera.far = 200;
+		this.shadowHelper = new THREE.CameraHelper(this.light.shadow.camera);
+		this.scene.add(this.shadowHelper);
+
+		this.scene.add(this.light);
 
 		// TODO: these are placeholder testing objects that should be removed when the real world is implemented
 		var ground_material = Physijs.createMaterial(
@@ -172,6 +165,19 @@ Level.prototype = {
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 10*1.5, 2), new THREE.Euler(Math.PI / 2, 0, 0, "YXZ"), 0xffff00, this.settings);
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
+
+		var shape = new THREE.Shape();
+		shape.lineTo(1,0);
+		shape.lineTo(1,2);
+		shape.lineTo(0,2);
+		shape.lineTo(0,1);
+		shape.lineTo(-1,1);
+		shape.lineTo(-1,0);
+		shape.lineTo(0,0);
+		var shapemesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+		this.scene.add(shapemesh);
+
+		this.updateSettings();
 
 		return this.scene;
 	},
@@ -308,6 +314,24 @@ Level.prototype = {
 			}
 		}
 
+	},
+
+	/**
+	 * Perform actions needed to alter graphics settings.
+	 */
+	updateSettings: function() {
+		if(this.settings.shadowQuality == 0) {
+			this.light.castShadow = false;
+		} else if(this.settings.shadowQuality == 1) {
+			this.light.castShadow = true;
+			this.light.shadow.bias = -.005;
+			this.light.shadow.mapSize.height = this.light.shadow.mapSize.width = 1024;
+		} else if(this.settings.shadowQuality == 2) {
+			this.light.castShadow = true;
+			this.light.shadow.bias = -.003;
+			this.light.shadow.mapSize.height = this.light.shadow.mapSize.width = 4096;
+		}
+		this.shadowHelper.visible = this.settings.debug;
 	}
 
 };
