@@ -29,6 +29,10 @@ var Level = function(data, timestep, settings) {
 	this.portals = [];
 	// used for detecting passing through a portal
 	this.playerPortalValues = [];
+	// used for checking if portals are valid
+	this.raycaster = new THREE.Raycaster();
+	this.raycaster.near = -1;
+	this.raycaster.far = 1;
 };
 
 Level.prototype = {
@@ -166,16 +170,26 @@ Level.prototype = {
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
+		// some test surfaces
 		var shape = new THREE.Shape();
-		shape.lineTo(1,0);
-		shape.lineTo(1,2);
-		shape.lineTo(0,2);
-		shape.lineTo(0,1);
-		shape.lineTo(-1,1);
-		shape.lineTo(-1,0);
+		shape.lineTo(-2,0.5);
+		shape.lineTo(-2,2.5);
+		shape.lineTo(0,2.5);
+		shape.lineTo(0,6.5);
+		shape.lineTo(4,6.5);
+		shape.lineTo(4,0.5);
 		shape.lineTo(0,0);
-		var shapemesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-		this.scene.add(shapemesh);
+
+		var mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
+		mesh.castShadow = mesh.receiveShadow = true;
+		this.scene.add(mesh.clone());
+		mesh.translateZ(10);
+		mesh.rotation.y = Math.PI;
+		this.scene.add(mesh.clone());
+		mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
+		mesh.translateY(8);
+		mesh.rotation.x = -Math.PI / 4;
+		this.scene.add(mesh.clone());
 
 		this.updateSettings();
 
@@ -314,6 +328,51 @@ Level.prototype = {
 			}
 		}
 
+	},
+
+	/**
+	 * Handles click events when controlling the player.
+	 * @param button the mouse button (usually 1 for left or 2 for right)
+	 */
+	click: function(button) {
+		if(!this.mode) {
+			if(button == 1) button = 0; // LMB
+			else if(button == 3) button = 1; // RMB
+			else return;
+
+			this.player.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.player.camera);
+			var intersects = this.player.raycaster.intersectObjects(this.scene.children);
+			if(intersects[0]) {
+				var rotation = intersects[0].object.rotation.clone();
+				rotation.reorder("YXZ");
+				rotation.y += Math.PI; // I don't know why, but shape geometries need this
+				var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
+				// check around the location to make sure there's enough room
+				this.raycaster.ray.direction = this.player.raycaster.ray.direction;
+				var points = 8; // the number of points to check
+				var pass = true;
+				var count = [];
+				for(var i = 0; i < points; i++) {
+					var theta = i / points * 2 * Math.PI;
+					this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
+						.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
+						.add(intersects[0].point);
+					if(this.raycaster.intersectObject(intersects[0].object).length == 0) {
+						count.push(i);
+						pass = false;
+						break;
+					}
+				}
+
+				if(pass) {
+					var other = this.portals[button].other;
+					portal.link(other);
+					other.link(portal);
+					this.portals[button] = portal;
+				}
+
+			}
+		}
 	},
 
 	/**

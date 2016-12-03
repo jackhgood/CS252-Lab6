@@ -11,7 +11,7 @@ var Player = function(scene, timestep, settings) {
 	// general player settings
 	this.speed = 5;
 	this.acceleration = 10;
-	this.airAcceleration = 1;
+	this.airAcceleration = 2;
 	this.jumpVelocity = 12;
 	this.mouseSensitivity = 0.004;
 	this.height = 1.6;
@@ -33,9 +33,21 @@ var Player = function(scene, timestep, settings) {
 		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
 		1000 // far (the skybox is at 450,000, currently scaled by 0.005)
 	);
-	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this
 	this.camera.rotation.order = "YXZ";
+
+	// add crosshairs to camera
+	var geo = new THREE.Geometry();
+	geo.vertices.push(new THREE.Vector3(0, 0.01, 0));
+	geo.vertices.push(new THREE.Vector3(0, -0.01, 0));
+	geo.vertices.push(new THREE.Vector3(0, 0, 0));
+	geo.vertices.push(new THREE.Vector3(0.01, 0, 0));
+	geo.vertices.push(new THREE.Vector3(-0.01, 0, 0));
+
+	var crosshair = new THREE.Line(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+	crosshair.position.z = -0.5;
+	this.camera.add(crosshair);
+
 	scene.add(this.camera);
 
 	// build the player's physical body
@@ -263,20 +275,6 @@ Player.prototype = {
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
 			this.groundcasterLine.geometry = geo;
 			this.groundcasterPoint.position.copy(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
-		}
-	},
-
-	/**
-	 * Handles click events when controlling the player.
-	 * @param button the mouse button (usually 1 for left or 2 for right)
-	 */
-	click: function(button) {
-		if(!this.mode) {
-			this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-			var intersects = this.raycaster.intersectObjects(this.scene.children);
-			if(intersects[0]) {
-
-			}
 		}
 	},
 

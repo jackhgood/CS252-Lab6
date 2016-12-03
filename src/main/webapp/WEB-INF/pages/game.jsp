@@ -33,7 +33,7 @@
 		// settings
 		var settings = {
 			// generally, 0 is low quality, 1 is medium, 2 is high
-			debug: false, // set to true to show additional things to help with debugging physics & rendering
+			debug: true, // set to true to show additional things to help with debugging physics & rendering
 			shadowQuality: 2,
 			portalQuality: 2,
 			portalRecursions: 5
@@ -89,6 +89,7 @@
 
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
+					event.stopPropagation();
 					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
 						// unpause
 						element.style.display = "none";
@@ -189,8 +190,9 @@
 			document.addEventListener(
 					"click",
 					function(event) {
+						// TODO: make sure this doesn't catch the click that unpauses the game
 						if(!paused) {
-							level.player.click(1);
+							level.click(event.which);
 						}
 					}
 			);
