@@ -4,7 +4,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>The Game</title>
+	<title>Gateway</title>
 
 	<link rel="stylesheet" href="<c:url value='/css/main.css' />" />
 	<link rel="stylesheet" type="text/css" href="<c:url value='/css/game.css' />" />
@@ -31,7 +31,13 @@
 		var viewport, renderer, render_stats, physics_stats, level;
 
 		// settings
-		var debug = true; // set to true to show additional things to help with debugging physics & rendering
+		var settings = {
+			// generally, 0 is low quality, 1 is medium, 2 is high
+			debug: true, // set to true to show additional things to help with debugging physics & rendering
+			shadowQuality: 2,
+			portalQuality: 2,
+			portalRecursions: 5
+		};
 		var timestep = 1/90; // object speed will necessarily be limited to 1/(2*timestep) to prevent traveling through 1-unit thick walls
 		  					 // (unless we can find some way around this) (TODO)
 
@@ -51,11 +57,12 @@
 			renderer = new THREE.WebGLRenderer({ antialias: true, sortObjects: false/*, logarithmicDepthBuffer: true*/ });
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.autoUpdate = false;
 			renderer.shadowMapSoft = true;
 			renderer.autoClear = false;
 			viewport.appendChild(renderer.domElement);
 
-			if(debug) {
+			if(settings.debug) {
 				// set up the fps counter for rendering and add it to the viewport
 				render_stats = new Stats();
 				render_stats.domElement.style.position = "absolute";
@@ -82,21 +89,24 @@
 
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
+					event.stopPropagation();
 					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
-						document.getElementById("pauseOverlay").style.display = "none";
+						// unpause
+						element.style.display = "none";
 						paused = false;
 						level.scene.onSimulationResume();
 						level.scene.simulate();
 					} else {
-						// TODO: apparently this doesn't work in Firefox. I need to find a different way to center content
-						document.getElementById("pauseOverlay").style.display = "block";
+						// pause
+						graphicsMenu.style.display = "none";
+						graphicsMenuDropdown.innerHTML = "&#9654 Graphics Settings";
+						element.style.display = "block";
 						paused = true;
 					}
 				};
 
 				var pointerlockerror = function(event) {
 					// TODO: I'm not sure what would actually trigger this, but it should be figured out and handled
-					alert("pointerlock error!");
 				};
 
 				document.addEventListener("pointerlockchange", pointerlockchange);
@@ -151,7 +161,7 @@
 						}
 						switch(event.keyCode) {
 							case 86: // V
-								if(debug) level.player.toggleThirdPerson();
+								if(settings.debug) level.player.toggleThirdPerson();
 								break;
 						}
 					}
@@ -177,6 +187,16 @@
 					}
 			);
 
+			document.addEventListener(
+					"click",
+					function(event) {
+						// TODO: make sure this doesn't catch the click that unpauses the game
+						if(!paused) {
+							level.click(event.which);
+						}
+					}
+			);
+
 			window.addEventListener(
 					"resize",
 					function(event) {
@@ -185,6 +205,65 @@
 						renderer.setSize(window.innerWidth, window.innerHeight);
 					}
 			);
+
+			// graphics menu event handlers
+			var graphicsMenu = document.getElementById("graphicsMenu");
+			var graphicsMenuDropdown = document.getElementById("graphicsMenuDropdown");
+
+			graphicsMenuDropdown.addEventListener(
+					"click",
+					function(event) {
+						event.stopPropagation();
+						if(graphicsMenu.style.display == "none") {
+							graphicsMenu.style.display = "block";
+							graphicsMenuDropdown.innerHTML = "&#9660 Graphics Settings";
+						} else {
+							graphicsMenu.style.display = "none";
+							graphicsMenuDropdown.innerHTML = "&#9654 Graphics Settings";
+						}
+					}
+			);
+
+			graphicsMenu.addEventListener(
+					"click",
+					function(event) {
+						event.stopPropagation();
+					}
+			);
+
+			document.getElementById("graphicsApplyButton").addEventListener(
+					"click",
+					function(event) {
+						// read the settings from the graphics form and update them
+						if(document.getElementById("shadowButton0").checked) {
+							settings.shadowQuality = 0;
+						} else
+						if(document.getElementById("shadowButton1").checked) {
+							settings.shadowQuality = 1;
+						} else
+						if(document.getElementById("shadowButton2").checked) {
+							settings.shadowQuality = 2;
+						}
+						if(document.getElementById("portalButton0").checked) {
+							settings.portalQuality = 0;
+						} else
+						if(document.getElementById("portalButton1").checked) {
+							settings.portalQuality = 1;
+						} else
+						if(document.getElementById("portalButton2").checked) {
+							settings.portalQuality = 2;
+						}
+						settings.portalRecursions = document.getElementById("portalRecursionsSlider").value;
+
+						level.updateSettings();
+					}
+			);
+
+			// set initial values
+			document.getElementById("shadowButton" + settings.shadowQuality).checked = true;
+			document.getElementById("portalButton" + settings.portalQuality).checked = true;
+			document.getElementById("portalRecursionsSlider").value = settings.portalRecursions;
+			document.getElementById("portalRecursionsValue").innerHTML = settings.portalRecursions.toString();
 
 			// begin
 			startLevel();
@@ -196,7 +275,7 @@
 		 * Used to trigger player's change of position as result of controls input.
 		 */
 		gameUpdate = function() {
-			level.player.update(keystatus);
+			level.update(keystatus);
 		};
 
 		/**
@@ -214,7 +293,7 @@
 					+ Number(level.player.camera.rotation.x).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.y).toFixed(2) + ", "
 					+ Number(level.player.camera.rotation.z).toFixed(2) + ")";
-			var dir = new THREE.Vector3(0, 0, 1).applyEuler(level.player.camera.rotation);
+			var dir = new THREE.Vector3(0, 0, -1).applyEuler(level.player.camera.rotation);
 			document.getElementById("debug_playerDirection").innerHTML = "("
 					+ Number(dir.x).toFixed(2) + ", "
 					+ Number(dir.y).toFixed(2) + ", "
@@ -235,15 +314,23 @@
 		 */
 		render = function() {
 			// TODO: special portal rendering will likely go here
-			level.player.prepCamera();
 			renderer.clear();
 			requestAnimationFrame(render);
 			var gl = renderer.context;
 			// TODO: have a graphics option that does not enable stencil testing, for users without a graphics card
-			gl.enable(gl.STENCIL_TEST);
-			level.render(renderer, level.player.camera, -1, 12);
-			gl.disable(gl.STENCIL_TEST);
-			if(debug) render_stats.update();
+			if(level.player.thirdPerson) level.player.prepCamera();
+			if(settings.portalQuality == 0) {
+				level.render(renderer, level.player.camera, -1, 0);
+			} else if(settings.portalQuality == 1) {
+				// TODO: implement medium portal settings with canvas texture
+
+			} else if(settings.portalQuality == 2) {
+				gl.enable(gl.STENCIL_TEST);
+				level.render(renderer, level.player.camera, -1, settings.portalRecursions);
+				gl.disable(gl.STENCIL_TEST);
+			}
+
+			if(settings.debug) render_stats.update();
 		};
 
 		/**
@@ -252,7 +339,7 @@
 		 */
 		startLevel = function () {
 			// load the level and initialize the scene
-			level = new Level(undefined, timestep, debug);
+			level = new Level(undefined, timestep, settings);
 			level.constructScene().addEventListener(
 					"update",
 					function() {
@@ -260,7 +347,7 @@
 						if(!paused) {
 							gameUpdate();
 							level.scene.simulate(undefined, 2);
-							if(debug) {
+							if(settings.debug) {
 								physics_stats.update();
 								debugUpdate();
 							}
@@ -315,6 +402,22 @@
 					</td>
 				</tr>
 			</table>
+			<div id="graphicsMenuDropdown">&#9654 Graphics Settings</div>
+			<div id="graphicsMenu">
+				Shadow Quality <br />
+				<input id="shadowButton0" type="radio" name="shadow"> None <br />
+				<input id="shadowButton1" type="radio" name="shadow"> Low <br />
+				<input id="shadowButton2" type="radio" name="shadow"> High <br />
+				Portal Quality <br />
+				<input id="portalButton0" type="radio" name="portal"> Low <br />
+				<input id="portalButton1" type="radio" name="portal"> Medium <br />
+				<input id="portalButton2" type="radio" name="portal"> High (GPU Recommended) <br />
+				Portal Visual Recursions: <span id="portalRecursionsValue"></span> <br />
+				<input id="portalRecursionsSlider" type="range" min="1" max="16" step="1"
+					   onchange="document.getElementById('portalRecursionsValue').innerHTML = this.value;" /> <br />
+				<button id="graphicsApplyButton">Apply</button>
+
+			</div>
 		</div>
 	</div>
 </div>

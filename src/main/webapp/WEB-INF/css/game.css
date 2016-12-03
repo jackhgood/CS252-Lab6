@@ -38,6 +38,35 @@ body {
 	color: white;
 }
 
+#graphicsMenuDropdown {
+	text-align: left;
+	cursor: pointer;
+}
+
+#graphicsMenu {
+	display: none;
+	position: relative;
+	left: 20px;
+	text-align: left;
+}
+
+#graphicsMenu input {
+	position: relative;
+	left: 8px;
+}
+
+#graphicsMenu button {
+	background: transparent;
+	border: 1px solid white;
+	border-radius: 4px;
+	cursor: pointer;
+	outline: none;
+	padding: 3px 6px 3px 6px;
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+}
+
 #debug {
 	position: absolute;
 	top: 50px;

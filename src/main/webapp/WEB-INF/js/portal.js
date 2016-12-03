@@ -5,10 +5,10 @@
  * @param position vector of the location of the center of the portal
  * @param rotation the THREE.Euler rotation
  * @param color the color of the portal
- * @param debug whether to render in debug mode
+ * @param settings the gameplay settings
  * @constructor
  */
-var Portal = function(scene, player, position, rotation, color, debug) {
+var Portal = function(scene, player, position, rotation, color, settings) {
 
 	// general portal settings
 	this.radiusX = 0.5;
@@ -17,10 +17,12 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	this.scene = scene;
 	this.position = position;
 	if(rotation.order !== "YXZ") rotation.reorder("YXZ");
+	rotation.y += Math.PI;
 	this.rotation = rotation;
 	this.antirotation = new THREE.Euler(-rotation.x, -rotation.y, -rotation.z, "ZXY");
 	this.color = color;
-	this.debug = debug;
+	this.offset = 2 * player.camera.near;
+	this.settings = settings;
 	this.other = null;
 
 	this.forward = new THREE.Vector3(0, 0, 1).applyEuler(rotation);
@@ -49,8 +51,11 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	this.sceneInner = new THREE.Scene();
 	this.sceneInner.add(this.inner);
 
+	// put some offset so we don't clip the portal texture
+	this.position.add(this.forward.clone().multiplyScalar(this.offset));
+
 	// mark which side is the top
-	if(this.debug) {
+	if(this.settings.debug) {
 		var debugGeometry = new THREE.CircleGeometry(this.radiusX / 10, 16);
 		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -3 });
 		debugGeometry.translate(0, 1.1 * this.radiusY, 0);
@@ -60,7 +65,7 @@ var Portal = function(scene, player, position, rotation, color, debug) {
 	}
 
 	// the camera helper was broken when portal recursion was added :(
-	/*if(this.debug) {
+	/*if(this.settings.debug) {
 		this.helper = new THREE.CameraHelper(this.camera);
 		scene.add(this.helper);
 	}*/
@@ -89,39 +94,42 @@ Portal.prototype = {
 
 		this.transform(camera);
 
-		// reflect the camera's position across the portal plane
-		// see http://mathworld.wolfram.com/Reflection.html
-		//camera.position.sub(this.other.forward.clone().multiplyScalar(2 * (this.other.forward.dot(camera.position) - this.other.forward.dot(this.other.position))));
-
 		camera.updateProjectionMatrix();
 
-		// set projection matrix to use oblique near clip plane
-		// projection matrix code from http://jsfiddle.net/slayvin/PT32b/
-		// paper explaining this technique: http://www.terathon.com/lengyel/Lengyel-Oblique.pdf
 		var clipPlane = new THREE.Plane();
 		this.forward.negate();
-		clipPlane.setFromNormalAndCoplanarPoint(this.forward, this.position);
+		clipPlane.setFromNormalAndCoplanarPoint(this.forward, this.forward.clone().multiplyScalar(this.offset).add(this.position));
 		this.forward.negate();
 		clipPlane.applyMatrix4(camera.matrixWorldInverse);
+		var dist = clipPlane.distanceToPoint(new THREE.Vector3(0, 0, 0));
+		if(dist > 0) return null;
+		if(dist > -0.1) {
+			camera.near = this.offset / 2;
+			camera.updateProjectionMatrix();
+		} else {
 
-		clipPlane = new THREE.Vector4(clipPlane.normal.x, clipPlane.normal.y, clipPlane.normal.z, clipPlane.constant);
+			// set projection matrix to use oblique near clip plane
+			// projection matrix code from http://jsfiddle.net/slayvin/PT32b/
+			// paper explaining this technique: http://www.terathon.com/lengyel/Lengyel-Oblique.pdf
+			clipPlane = new THREE.Vector4(clipPlane.normal.x, clipPlane.normal.y, clipPlane.normal.z, clipPlane.constant);
 
-		var q = new THREE.Vector4();
-		var projectionMatrix = camera.projectionMatrix;
+			var q = new THREE.Vector4();
+			var projectionMatrix = camera.projectionMatrix;
 
-		q.x = (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0];
-		q.y = (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5];
-		q.z = -1.0;
-		q.w = (1.0 + projectionMatrix.elements[10]) / camera.projectionMatrix.elements[14];
+			q.x = (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0];
+			q.y = (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5];
+			q.z = -1.0;
+			q.w = (1.0 + projectionMatrix.elements[10]) / camera.projectionMatrix.elements[14];
 
-		// Calculate the scaled plane vector
-		clipPlane.multiplyScalar(2.0 / clipPlane.dot(q));
+			// Calculate the scaled plane vector
+			clipPlane.multiplyScalar(2.0 / clipPlane.dot(q));
 
-		// Replace the third row of the projection matrix
-		projectionMatrix.elements[2] = clipPlane.x;
-		projectionMatrix.elements[6] = clipPlane.y;
-		projectionMatrix.elements[10] = clipPlane.z + 1.0;
-		projectionMatrix.elements[14] = clipPlane.w;
+			// Replace the third row of the projection matrix
+			projectionMatrix.elements[2] = clipPlane.x;
+			projectionMatrix.elements[6] = clipPlane.y;
+			projectionMatrix.elements[10] = clipPlane.z + 1.0;
+			projectionMatrix.elements[14] = clipPlane.w;
+		}
 
 		return camera;
 	},
@@ -134,29 +142,38 @@ Portal.prototype = {
 	transform: function(object) {
 		// TODO: consider compiling the below transformation into a matrix so it's fast to reuse when recursing
 
-		// get the position
-		object.position.sub(this.position);
-		object.position.applyEuler(this.antirotation);
-		object.position.x = -object.position.x;
-		object.position.z = -object.position.z;
-		object.position.applyEuler(this.other.rotation);
-		object.position.add(this.other.position);
+		if(object instanceof THREE.Vector3) {
+			// get the position
+			object.applyEuler(this.antirotation);
+			object.x = -object.x;
+			object.z = -object.z;
+			object.applyEuler(this.other.rotation);
+		} else { // assumed to otherwise be an object with position and rotation
+			// get the position
+			object.position.sub(this.position);
+			object.position.applyEuler(this.antirotation);
+			object.position.x = -object.position.x;
+			object.position.z = -object.position.z;
+			object.position.applyEuler(this.other.rotation);
+			object.position.add(this.other.position);
 
-		// get the rotation
-		// TODO: this is a terrible way to do this, but I spent hours trying different ways and couldn't do better
-		if(object.rotation.order !== "YXZ") object.rotation.reorder("YXZ");
-		var forward = new THREE.Vector3(0, 0, -1).applyEuler(object.rotation);
-		var up = new THREE.Vector3(0, 1, 0).applyEuler(object.rotation);
-		forward.applyEuler(this.antirotation);
-		up.applyEuler(this.antirotation);
-		forward.x = -forward.x; up.x = -up.x;
-		forward.z = -forward.z; up.z = -up.z;
-		forward.applyEuler(this.other.rotation);
-		up.applyEuler(this.other.rotation);
-		forward.add(object.position);
-		object.up.copy(up);
-		object.lookAt(forward);
+			// get the rotation
+			// TODO: this is a terrible way to do this, but I spent hours trying different ways and couldn't do better
+			if(object.rotation.order !== "YXZ") object.rotation.reorder("YXZ");
+			var forward = new THREE.Vector3(0, 0, -1).applyEuler(object.rotation);
+			var up = new THREE.Vector3(0, 1, 0).applyEuler(object.rotation);
+			forward.applyEuler(this.antirotation);
+			up.applyEuler(this.antirotation);
+			forward.x = -forward.x; up.x = -up.x;
+			forward.z = -forward.z; up.z = -up.z;
+			forward.applyEuler(this.other.rotation);
+			up.applyEuler(this.other.rotation);
+			forward.add(object.position);
+			object.up.copy(up);
+			object.lookAt(forward);
+		}
 
+		return object;
 	}
 
 };

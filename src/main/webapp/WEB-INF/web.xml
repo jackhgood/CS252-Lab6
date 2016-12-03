@@ -4,29 +4,28 @@
     xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
     version="3.1">
 
-	<display-name>Spring MVC Test</display-name>
+	<display-name>Gateway</display-name>
 
-	<context-param>
-		<param-name>contextConfigLocation</param-name>
-		<param-value>/META-INF/context.xml</param-value>
-	</context-param>
-<!--
-    <listener>
-        <listener-class>
-            com.example.project.listener.AppListener
-        </listener-class>
-    </listener>
--->
-    <!--
-    <filter>
+
+   <!-- <filter>
         <filter-name>springSecurityFilterChain</filter-name>
         <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
     </filter>
     <filter-mapping>
         <filter-name>springSecurityFilterChain</filter-name>
         <url-pattern>/*</url-pattern>
-    </filter-mapping>
-    -->
+    </filter-mapping>-->
+
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>/META-INF/context.xml</param-value>
+		<!--<param-value>/META-INF/security.xml</param-value>-->
+	</context-param>
+
+    <listener>
+        <listener-class>net.mybluemix.gateway.listener.AppListener</listener-class>
+        <!--<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>-->
+    </listener>
 
 	<servlet>
 		<servlet-name>mvc-dispatcher</servlet-name>

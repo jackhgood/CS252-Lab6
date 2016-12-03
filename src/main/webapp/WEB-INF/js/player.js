@@ -3,26 +3,27 @@
  * Adds the camera and player physics objects to the scene.
  * @param scene the Physijs.scene the player will belong to
  * @param timestep the expected time between physics simulations
- * @param debug whether to display the player in debug mode (default false)
+ * @param settings the gameplay settings
  * @constructor
  */
-var Player = function(scene, timestep, debug) {
+var Player = function(scene, timestep, settings) {
 
 	// general player settings
 	this.speed = 5;
 	this.acceleration = 10;
-	this.airAcceleration = 1;
+	this.airAcceleration = 2;
 	this.jumpVelocity = 12;
 	this.mouseSensitivity = 0.004;
-	this.height = 1.8;
+	this.height = 1.6;
 	this.width = 0.5;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
 	this.mode = 0; // 0 = player, 1 = edit
+	this.diam = 5;
 
 	this.scene = scene;
 	this.timestep = timestep;
-	this.debug = (typeof debug == "undefined") ? false : debug;
+	this.settings = settings;
 	// TODO: we may have to scale the world before rendering or something so near and far aren't such a huge gap
 	// TODO: perhaps make the sky part of a separate scene, render it first with high far, then adjust it down?
 	// TODO: or just scale down the scene with the sky in it?
@@ -32,9 +33,21 @@ var Player = function(scene, timestep, debug) {
 		0.01, // near (very small so that portals seem realistic) TODO: will this small value cause issues down the road?
 		1000 // far (the skybox is at 450,000, currently scaled by 0.005)
 	);
-	// causes Y rotation to be applied before X and Z
 	// camera controls would be highly unweildy without this
 	this.camera.rotation.order = "YXZ";
+
+	// add crosshairs to camera
+	var geo = new THREE.Geometry();
+	geo.vertices.push(new THREE.Vector3(0, 0.01, 0));
+	geo.vertices.push(new THREE.Vector3(0, -0.01, 0));
+	geo.vertices.push(new THREE.Vector3(0, 0, 0));
+	geo.vertices.push(new THREE.Vector3(0.01, 0, 0));
+	geo.vertices.push(new THREE.Vector3(-0.01, 0, 0));
+
+	var crosshair = new THREE.Line(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+	crosshair.position.z = -0.5;
+	this.camera.add(crosshair);
+
 	scene.add(this.camera);
 
 	// build the player's physical body
@@ -77,6 +90,7 @@ var Player = function(scene, timestep, debug) {
 		}
 	);
 	scene.add(this.foot);
+	this.foot._physijs.collision_flags = 4;
 	// if you are reading this and want to have some fun, comment out the next line and set debug to true in game.jsp
 	this.foot.setAngularFactor(new THREE.Vector3(0, 0, 0));
 
@@ -84,11 +98,20 @@ var Player = function(scene, timestep, debug) {
 	var constraint = new Physijs.DOFConstraint(this.foot, this.body, this.foot.position);
 	scene.addConstraint(constraint);
 
+
+	var selectionbox = new THREE.BoxGeometry(1.05,1.05,1.05);
+	var selectionedge = new THREE.EdgesGeometry(selectionbox);
+	var selectionmaterial = new THREE.LineBasicMaterial( { color: 0x32cd32, linewidth: 2 } );
+	this.selection = new THREE.LineSegments( selectionedge, selectionmaterial );
+	this.selection.position.set(10, 10, 10);
+	scene.add(this.selection);
+
+
 	// initialize a special short-range raycaster that determines whether the player is on the ground
 	this.onGround = false;
 	this.groundcaster = new THREE.Raycaster();
 	this.groundcaster.far = 0.2 * this.height;
-	if(debug) {
+	if(settings.debug) {
 		this.groundcasterLine = new THREE.Line(new THREE.Geometry(), new THREE.MeshBasicMaterial({ color: 0x6666ff }));
 		scene.add(this.groundcasterLine);
 		this.groundcasterLine.visible = false;
@@ -96,6 +119,11 @@ var Player = function(scene, timestep, debug) {
 		scene.add(this.groundcasterPoint);
 		this.groundcasterPoint.visible = false;
 	}
+
+	// the raycaster used for shooting portals
+	this.raycaster = new THREE.Raycaster();
+	this.raycaster.near = this.camera.near;
+	this.raycaster.far = this.camera.far;
 
 	// just for convenience
 	this.HALF_PI = Math.PI / 2;
@@ -123,7 +151,7 @@ Player.prototype = {
 		var intersects = this.groundcaster.intersectObjects(this.scene.children);
 		for(var i = 0; i < intersects.length; i++) {
 			if(!(intersects[i].object == this.foot || intersects[i].object == this.body
-				|| (debug && (intersects[i].object == this.groundcasterLine || intersects[i].object == this.groundcasterPoint)))) {
+				|| (this.settings.debug && (intersects[i].object == this.groundcasterLine || intersects[i].object == this.groundcasterPoint)))) {
 				this.onGround = true;
 				break;
 			}
@@ -143,13 +171,17 @@ Player.prototype = {
 		// TODO: get rid of this when done testing
 		if(keystatus[16]) // Shift
 			speed *= 10;
-		//
-		// // constants to compensate for friction
-		// // these were determined experimentally
-		// if(this.onGround) {
-		// 	speed += 0.8 * this.friction;
-		// 	acceleration += 0.6 * this.friction;
-		// }
+
+		// compensate for portals messing up z-rotation
+		// TODO: this could use some improvement
+		var adjust = 0.04;
+		if(this.camera.rotation.z > 0) {
+			this.camera.rotation.z -= adjust;
+			if(this.camera.rotation.z < 0) this.camera.rotation.z = 0
+		} else if(this.camera.rotation.z < 0) {
+			this.camera.rotation.z += adjust;
+			if(this.camera.rotation.z > 0) this.camera.rotation.z = 0
+		}
 
 		// accelaration is multiplied by sqrt(2) to account for the fact that the body is only half the player's mass,
 		// but not if moving diagonally (to prevent increased player speed on the diagonal)
@@ -157,8 +189,19 @@ Player.prototype = {
 		if((W != S) && (A != D)) speed /= 1.414214;
 
 
-		if(this.mode) { //Edit mode
-
+		if(this.mode == 1) { // Edit mode
+			if (W && !S) {
+				this.camera.translateZ(-speed*timestep);
+			}
+			if (S && !W) {
+				this.camera.translateZ(speed*timestep);
+			}
+			if (A && !D) {
+				this.camera.translateX(-speed*timestep);
+			}
+			if (D && !A) {
+				this.camera.translateX(speed*timestep);
+			}
 		}
 		else { // Player Mode
 			// get the current velocity, rotated to local space
@@ -226,7 +269,7 @@ Player.prototype = {
 
 
 		// update the ground raycaster visualization
-		if(debug) {
+		if(this.settings.debug) {
 			var geo = new THREE.Geometry();
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.near, 0).add(this.foot.position));
 			geo.vertices.push(new THREE.Vector3(0, -this.groundcaster.far, 0).add(this.foot.position));
@@ -253,21 +296,23 @@ Player.prototype = {
 	 * Must be called each time this camera is being used to render a scene.
 	 */
 	prepCamera: function() {
-		// move the camera to follow the body
-		this.camera.position.set(
-			this.body.position.x,
-			this.body.position.y + 0.25 * this.height,
-			this.body.position.z
-		);
-		// if in debug mode, shift to 3rd person
-		// TODO: maybe add scroll wheel to change camera distance from body
-		if(this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		if(this.mode == 0) {
+			// move the camera to follow the body
+			this.camera.position.set(
+				this.body.position.x,
+				this.body.position.y + 0.25 * this.height,
+				this.body.position.z
+			);
+			// if in debug mode, shift to 3rd person
+			// TODO: maybe add scroll wheel to change camera distance from body
+			if (this.thirdPerson) this.camera.position.add(this.camera.getWorldDirection().multiplyScalar(-5));
+		}
 	},
 
 	/**
 	 * Sets the player's position and rotation.
 	 * @param pos the desired THREE.Vector3 position
-	 * @param rot the desired THREE.Vector3 position
+	 * @param rot the desired THREE.Vector3 rotation
 	 */
 	set: function(pos, rot) {
 		var footoffs = this.foot.position.sub(this.body.position);
@@ -277,6 +322,12 @@ Player.prototype = {
 		this.foot.__dirtyPosition = true;
 		if(!(typeof rot == "undefined"))
 			this.camera.rotation.copy(rot);
+	},
+
+	setFromCamera: function() {
+		if(!this.mode) {
+			this.set(new THREE.Vector3(0, -0.25 * this.height, 0).add(this.camera.position));
+		}
 	},
 
 	/**

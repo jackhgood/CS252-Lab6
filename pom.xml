@@ -2,15 +2,16 @@
 		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.example</groupId>
-	<artifactId>SpringMVCTest</artifactId>
+	<groupId>net.mybluemix</groupId>
+	<artifactId>Gateway</artifactId>
 	<packaging>war</packaging>
 	<version>1.0</version>
-	<name>SpringMVCTest</name>
+	<name>Gateway</name>
 
 	<properties>
 		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
-		<spring.version>4.1.7.RELEASE</spring.version>
+		<spring.version>4.2.1.RELEASE</spring.version>
+		<spring-security.version>4.2.0.RELEASE</spring-security.version>
 		<jackson.version>2.6.0</jackson.version>
 		<jdk.version>1.8</jdk.version>
 		<apachepoi.version>3.12</apachepoi.version>
@@ -65,19 +66,42 @@
 			<version>${spring.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+			<version>${spring-security.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+			<version>${spring-security.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-openid</artifactId>
+			<version>${spring-security.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver</artifactId>
+			<version>3.2.2</version>
+		</dependency>
 
 		<!-- http://www.webjars.org/ -->
 		<dependency>
-			<groupId>org.webjars</groupId>
-			<artifactId>jquery</artifactId>
-			<version>1.9.1</version>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongo-java-driver</artifactId>
+			<version>3.2.2</version>
 		</dependency>
 
 	</dependencies>
 
 
 	<build>
-		<finalName>SpringMVCTest</finalName>
+		<finalName>Gateway</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

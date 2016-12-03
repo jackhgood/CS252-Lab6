@@ -1,5 +1,7 @@
-package com.example.project.controller;
+package net.mybluemix.gateway.controller;
 
+import net.mybluemix.gateway.dao.DAOFactory;
+import net.mybluemix.gateway.dao.LevelDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,12 +23,24 @@ public class MainController {
     ServletContext servletContext;
 
     /**
-     * Displays the main menu page.
+     * Play the game.
      * @return the name of the jsp to display
      */
+	@RequestMapping("/play")
+	public String play(HttpServletRequest request, Model model) {
+		return "game";
+	}
+
+	/**
+	 * Go to the home page.
+	 * @return the name of the jsp to display
+	 */
 	@RequestMapping("")
 	public String home(HttpServletRequest request, Model model) {
-		return "game";
+		//LevelDAO dao = DAOFactory.getLevelDAO(servletContext);
+		//model.addAttribute("message", dao.getLevel("test", ""));
+		model.addAttribute("message", "Hello");
+		return "main";
 	}
 
 }
