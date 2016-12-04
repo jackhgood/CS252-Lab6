@@ -14,7 +14,7 @@ var BLOCK_ENUM =
 	NO_SURFACE: 0 << 8,
 	PORTAL_SURFACE: 1 << 8,
 	BLACK_SURFACE: 2 << 8,
-}
+};
 
 //This is the node structure for the octree.
 //Our world is 2048x2048x2048 "blocks" in size.
@@ -29,7 +29,6 @@ var Node = function(centerx, centery, centerz, radius, parent) {
 	this.radius = (typeof radius == "undefined") ? 1024 : radius;
 	this.parent = (typeof parent == "undefined") ? null : parent;
 	this.octants = [];
-	this.minSize = 1;
 	this.block = BLOCK_ENUM.AIR | BLOCK_ENUM.NO_SURFACE | 0;
 };
 
@@ -37,25 +36,96 @@ Node.prototype =
 {
 	constructor: Node,
 
+	//For now, always set size to 0. The size thing is unimportant for now.
 	insertBlock: function(x, y, z, size, surfaceType, blockType, orientation)
 	{
-
+		var octant = this.getOctant(x,y,z);
+		if(this.radius == 0)
+		{
+			this.block = surfaceType | blockType | orientation;
+			return;
+		}
+		if(this.octants[octant] == 'undefined')
+		{
+			var halfRadius = this.radius / 2;
+			var newX, newY, newZ;
+			switch(octant)
+			{
+				case 0:
+					newX = this.centerX + halfRadius;
+					newY = this.centerY + halfRadius;
+					newZ = this.centerZ + halfRadius;
+					break;
+				case 1:
+					newX = this.centerX + halfRadius;
+					newY = this.centerY + halfRadius;
+					newZ = this.centerZ - halfRadius;
+					break;
+				case 2:
+					newX = this.centerX + halfRadius;
+					newY = this.centerY - halfRadius;
+					newZ = this.centerZ + halfRadius;
+					break;
+				case 3:
+					newX = this.centerX + halfRadius;
+					newY = this.centerY - halfRadius;
+					newZ = this.centerZ - halfRadius;
+					break;
+				case 4:
+					newX = this.centerX - halfRadius;
+					newY = this.centerY + halfRadius;
+					newZ = this.centerZ + halfRadius;
+					break;
+				case 5:
+					newX = this.centerX - halfRadius;
+					newY = this.centerY + halfRadius;
+					newZ = this.centerZ - halfRadius;
+					break;
+				case 6:
+					newX = this.centerX - halfRadius;
+					newY = this.centerY - halfRadius;
+					newZ = this.centerZ + halfRadius;
+					break;
+				case 7:
+					newX = this.centerX - halfRadius;
+					newY = this.centerY - halfRadius;
+					newZ = this.centerZ - halfRadius;
+					break;
+			}
+			this.octants[octant] = new Node(newX, newY, newZ, halfRadius, this);
+		}
+		
+		this.octants[octant].insertBlock(x, y, z, size, surfaceType, blockType, orientation);
 	},
 
 	insertBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
 	{
-
+		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
+		{
+			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
+			{
+				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
+				{
+					this.insertBlock(x, y, z, surfaceType, blockType, orientation);
+				}
+			}
+		}
 	},
 
 	getBlock: function(x, y, z)
 	{
-		return
+		var octant = this.getOctant(x,y,z);
+		if(this.octants[octant] == 'undefined' || this.radius == 0)
 		{
-			var surfaceType: (this.block & SURFACEMASK) >> 8,
-			var blockType: (this.block & BLOCKMASK) >> 4,
-			var orientation: (this.block & ORIENTMASK)
-		};
-	}
+			return {
+				surfaceType: (this.block & SURFACEMASK),
+				blockType: (this.block & BLOCKMASK),
+				orientation: (this.block & ORIENTMASK)
+			};
+		}
+
+		return this.octants[octant].getBlock(x,y,z);
+	},
 
 	getOctant: function(x, y, z)
 	{
