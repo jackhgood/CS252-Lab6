@@ -226,19 +226,6 @@ Level.prototype = {
 		return this.scene;
 	},
 
-	/**
-	 * Clones the geometry, scales it, and returns the result.
-	 * @param geometry the geometry to clone and scale
-	 * @param scale the scale
-	 */
-	scaleGeometry: function(geometry, scale) {
-		var geo = geometry.clone();
-		geo.vertices.forEach(function(v){
-			v.multiply(scale);
-		});
-		return geo;
-	},
-
 	createBlocks: function(position, scale, surfaceType, blockType, orientation)
 	{
 		var geo = this.components[blockType].clone().scale(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
@@ -252,7 +239,11 @@ Level.prototype = {
         if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
             this.data.portalBlocks.push(mesh);
         }
+        // our block data
         mesh.surfaceType = surfaceType;
+		mesh.blockType = blockType;
+		mesh.orientation = orientation;
+		mesh.blockScale = scale.clone();
 		this.scene.add(mesh);
 	},
 
