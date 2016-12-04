@@ -456,7 +456,7 @@ Level.prototype = {
 				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2)
 				break;
 			case BLOCK_ENUM.HALF_SLOPE:
-
+                
 				break;
 			case BLOCK_ENUM.CORNER_SLOPE:
 
@@ -472,6 +472,7 @@ Level.prototype = {
         {
             this.data.portalBlocks.push(mesh);
         }
+        mesh.surfaceType = surfaceType;
 		this.scene.add(mesh);
 
         //These comments disable the octree.
