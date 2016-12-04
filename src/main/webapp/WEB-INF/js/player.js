@@ -235,8 +235,8 @@ Player.prototype = {
 				if(this.prevMouseState) {
 					// place the blocks
 					this.level.createBlocks(
-						selectPosition.x, selectPosition.y, selectPosition.z,
-						this.selectionStart.x, this.selectionStart.y, this.selectionStart.z,
+						this.selection.position,
+						this.selection.scale,
 						this.selectedSurface, this.selectedBlock, this.selectedOrientation
 					);
 				}

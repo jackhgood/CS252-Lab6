@@ -13,177 +13,9 @@ var BLOCK_ENUM =
 
 	NO_SURFACE: 0 << 8,
 	PORTAL_SURFACE: 1 << 8,
-	BLACK_SURFACE: 2 << 8,
+	BLACK_SURFACE: 2 << 8
 };
 
-//This is the node structure for the octree.
-//Our world is 2048x2048x2048 "blocks" in size.
-//This is a nice number since we can just divide
-//the world in halves until we reach a size of 1.
-
-
-var Node = function(centerx, centery, centerz, radius, parent) {
-	this.centerX = (typeof centerx == "undefined") ? 0 : centerx;
-	this.centerY = (typeof centery == "undefined") ? 0 : centery;
-	this.centerZ = (typeof centerz == "undefined") ? 0 : centerz;
-	this.radius = (typeof radius == "undefined") ? 1024 : radius;
-	this.parent = (parent == null || typeof parent == "undefined") ? null : parent;
-	this.octants = [];
-	this.block = BLOCK_ENUM.AIR | BLOCK_ENUM.NO_SURFACE | 0;
-	this.physiBlock = null;
-};
-
-Node.prototype =
-{
-	constructor: Node,
-
-	//For now, always set size to 0. The size thing is unimportant for now.
-	insertBlock: function(x, y, z, size, surfaceType, blockType, orientation, phyBlock)
-	{
-		var octant = this.getOctant(x,y,z);
-		if(this.radius == 0)
-		{
-			this.block = surfaceType | blockType | orientation;
-			this.physiBlock = phyBlock;
-			return;
-		}
-		if(typeof this.octants[octant] == 'undefined')
-		{
-			var halfRadius = this.radius / 2;
-			var newX, newY, newZ;
-			switch(octant)
-			{
-				case 0:
-					newX = this.centerX + halfRadius;
-					newY = this.centerY + halfRadius;
-					newZ = this.centerZ + halfRadius;
-					break;
-				case 1:
-					newX = this.centerX + halfRadius;
-					newY = this.centerY + halfRadius;
-					newZ = this.centerZ - halfRadius;
-					break;
-				case 2:
-					newX = this.centerX + halfRadius;
-					newY = this.centerY - halfRadius;
-					newZ = this.centerZ + halfRadius;
-					break;
-				case 3:
-					newX = this.centerX + halfRadius;
-					newY = this.centerY - halfRadius;
-					newZ = this.centerZ - halfRadius;
-					break;
-				case 4:
-					newX = this.centerX - halfRadius;
-					newY = this.centerY + halfRadius;
-					newZ = this.centerZ + halfRadius;
-					break;
-				case 5:
-					newX = this.centerX - halfRadius;
-					newY = this.centerY + halfRadius;
-					newZ = this.centerZ - halfRadius;
-					break;
-				case 6:
-					newX = this.centerX - halfRadius;
-					newY = this.centerY - halfRadius;
-					newZ = this.centerZ + halfRadius;
-					break;
-				case 7:
-					newX = this.centerX - halfRadius;
-					newY = this.centerY - halfRadius;
-					newZ = this.centerZ - halfRadius;
-					break;
-			}
-			this.octants[octant] = new Node(newX, newY, newZ, halfRadius, this);
-		}
-
-		this.octants[octant].insertBlock(x, y, z, size, surfaceType, blockType, orientation, phyBlock);
-	},
-
-	insertBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation, phyBlock)
-	{
-		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-		{
-			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-			{
-				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
-				{
-					this.insertBlock(x, y, z, surfaceType, blockType, orientation,  phyBlock);
-				}
-			}
-		}
-	},
-
-	getBlock: function(x, y, z)
-	{
-		var octant = this.getOctant(x,y,z);
-		if(this.octants[octant] == 'undefined' || this.radius == 0)
-		{
-			return {
-				surfaceType: (this.block & SURFACEMASK),
-				blockType: (this.block & BLOCKMASK),
-				orientation: (this.block & ORIENTMASK)
-			};
-		}
-
-		return this.octants[octant].getBlock(x,y,z);
-	},
-
-	getOctant: function(x, y, z)
-	{
-
-		if(x >= this.centerX)
-		{
-			if(y >= this.centerY)
-			{
-				if(z >= this.centerZ)
-				{
-					return 0;
-				}
-				else
-				{
-					return 1;
-				}
-			}
-			else
-			{
-				if(z >= this.centerZ)
-				{
-					return 2;
-				}
-				else
-				{
-					return 3;
-				}
-			}
-		}
-		else
-		{
-			if(y >= this.centerY)
-			{
-				if(z >= this.centerZ)
-				{
-					return 4;
-				}
-				else
-				{
-					return 5;
-				}
-			}
-			else
-			{
-				if(z >= this.centerZ)
-				{
-					return 6;
-				}
-				else
-				{
-					return 7;
-				}
-			}
-		}
-	}
-};
 
 /**
  * Constructor for Level.
@@ -205,6 +37,85 @@ var Level = function(data, timestep, settings) {
 	this.raycaster = new THREE.Raycaster();
 	this.raycaster.near = -0.1;
 	this.raycaster.far = 0.1;
+
+	// block components
+	this.components = [];
+
+	// materials
+	this.components[BLOCK_ENUM.PORTAL_SURFACE] = Physijs.createMaterial(new THREE.MeshLambertMaterial( { color: 0xdddddd } ), .8, .4);
+	this.components[BLOCK_ENUM.BLACK_SURFACE] = Physijs.createMaterial(new THREE.MeshLambertMaterial( { color: 0x333333 } ), .8, .4);
+
+	// geometries
+	this.components[BLOCK_ENUM.CUBE] = new THREE.BoxGeometry(1, 1, 1);
+	var geo;
+
+	// slope
+	geo = new THREE.Geometry();
+	geo.vertices.push(
+		new THREE.Vector3(-0.5, -0.5, -0.5),
+		new THREE.Vector3(0.5, -0.5, -0.5),
+		new THREE.Vector3(0.5, -0.5, 0.5),
+		new THREE.Vector3(-0.5, -0.5, 0.5),
+		new THREE.Vector3(-0.5, 0.5, -0.5),
+		new THREE.Vector3(0.5, 0.5, -0.5)
+	);
+	geo.faces.push(
+		new THREE.Face3(0, 1, 2), // bottom
+		new THREE.Face3(2, 3, 0),
+		new THREE.Face3(0, 5, 1), // back
+		new THREE.Face3(5, 0, 4),
+		new THREE.Face3(0, 3, 4), // left side
+		new THREE.Face3(1, 5, 2), // right side
+		new THREE.Face3(4, 2, 5), // top
+		new THREE.Face3(2, 4, 3)
+	);
+	this.components[BLOCK_ENUM.HALF_SLOPE] = geo;
+
+	// tetra
+	geo = new THREE.Geometry();
+	geo.vertices.push(
+		new THREE.Vector3(-0.5, -0.5, -0.5),
+		new THREE.Vector3(0.5, -0.5, -0.5),
+		new THREE.Vector3(-0.5, -0.5, 0.5),
+		new THREE.Vector3(-0.5, 0.5, -0.5)
+	);
+	geo.faces.push(
+		new THREE.Face3(0, 1, 2), // bottom
+		new THREE.Face3(0, 3, 1), // back
+		new THREE.Face3(0, 2, 3), // side
+		new THREE.Face3(1, 3, 2) // top
+	);
+	this.components[BLOCK_ENUM.CORNER_SLOPE] = geo;
+
+	// anti-tetra
+	geo = new THREE.Geometry();
+	geo.vertices.push(
+		new THREE.Vector3(-0.5, -0.5, -0.5),
+		new THREE.Vector3(0.5, -0.5, -0.5),
+		new THREE.Vector3(0.5, -0.5, 0.5),
+		new THREE.Vector3(-0.5, -0.5, 0.5),
+		new THREE.Vector3(-0.5, 0.5, -0.5),
+		new THREE.Vector3(0.5, 0.5, -0.5),
+		new THREE.Vector3(0.5, 0.5, 0.5)
+	);
+	geo.faces.push(
+		new THREE.Face3(0, 1, 2), // bottom
+		new THREE.Face3(2, 3, 0),
+		new THREE.Face3(4, 6, 5), // top
+		new THREE.Face3(0, 5, 1), // back
+		new THREE.Face3(5, 0, 4),
+		new THREE.Face3(3, 2, 6), // front
+		new THREE.Face3(0, 3, 4), // left side
+		new THREE.Face3(1, 5, 2), // right side
+		new THREE.Face3(2, 5, 6),
+		new THREE.Face3(4, 3, 6)  // corner face
+	);
+	this.components[BLOCK_ENUM.INVERSE_CORNER] = geo;
+
+	// rotations
+	for(var i = 0; i < 12; i++) {
+		this.components[i] = new THREE.Euler(0, (i % 4) * Math.PI / 2, Math.floor(i / 4) * Math.PI / 2, "YXZ");
+	}
 };
 
 Level.prototype = {
@@ -222,7 +133,6 @@ Level.prototype = {
 		return {
 			playerPosition: new THREE.Vector3(0, 10, 0),
 			playerRotation: new THREE.Euler(0, 0, 0, "YXZ"),
-			levelTree: new Node(0,0,0,1024,null),
             blockList: [],
             portalBlocks: []
 		};
@@ -301,46 +211,8 @@ Level.prototype = {
 		ground.castShadow = false;
 		this.scene.add(ground);
 
-		this.createBlocks(-30, 1, -30, 30, 1, 30, BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
-		this.createBlocks(-5, 2, -5, 5, 2, 2, BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
-		// var item_material = Physijs.createMaterial(
-		// 	new THREE.MeshLambertMaterial({ color: 0x8888ff }),
-		// 	.8, .4
-		// );
-		// var box = new Physijs.BoxMesh(
-		// 	new THREE.CubeGeometry(1, 1, 1),
-		// 	item_material, 3
-		// );
-		// box.position.set(-3, 6, 0);
-		// box.castShadow = box.receiveShadow = true;
-		// this.scene.add(box);
-        //
-		// //region Code I don't need
-		// // to test slopes
-		// var cone = new Physijs.ConeMesh(
-		// 	new THREE.ConeGeometry(10, 4, 40),
-		// 	item_material,
-		// 	0
-		// );
-		// cone.position.set(20, 2, 20);
-		// cone.castShadow = cone.receiveShadow = true;
-		// this.scene.add(cone);
-		// var cone2 = new Physijs.ConeMesh(
-		// 	new THREE.ConeGeometry(10, 10, 40),
-		// 	item_material,
-		// 	0
-		// );
-		// cone2.position.set(20, 5, -20);
-		// cone2.castShadow = cone2.receiveShadow = true;
-		// this.scene.add(cone2);
-		// var cone3 = new Physijs.ConeMesh(
-		// 	new THREE.ConeGeometry(10, 30, 40),
-		// 	item_material,
-		// 	0
-		// );
-		// cone3.position.set(-20, 15, -20);
-		// cone3.castShadow = cone3.receiveShadow = true;
-		// this.scene.add(cone3);
+		this.createBlocks(new THREE.Vector3(0, 1.5, 0), new THREE.Vector3(60, 1, 60), BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
+		this.createBlocks(new THREE.Vector3(0, 2.5, 0), new THREE.Vector3(10, 1, 10), BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
 
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.settings);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.settings);
@@ -349,143 +221,39 @@ Level.prototype = {
 		this.portals[0].link(this.portals[1]);
 		this.portals[1].link(this.portals[0]);
 
-		// some test surfaces
-		// var shape = new THREE.Shape();
-		// shape.lineTo(-2,0.5);
-		// shape.lineTo(-2,2.5);
-		// shape.lineTo(0,2.5);
-		// shape.lineTo(0,6.5);
-		// shape.lineTo(4,6.5);
-		// shape.lineTo(4,0.5);
-		// shape.lineTo(0,0);
-        //
-		// var mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
-		// mesh.castShadow = mesh.receiveShadow = true;
-		// this.scene.add(mesh.clone());
-		// mesh.translateZ(10);
-		// mesh.rotation.y = Math.PI;
-		// this.scene.add(mesh.clone());
-		// mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
-		// mesh.translateY(8);
-		// mesh.rotation.x = -Math.PI / 4;
-		// this.scene.add(mesh.clone());
-
 		this.updateSettings();
 
 		return this.scene;
-		//endregion
 	},
 
-	//This function is useless since it creates to many blocks
-	createBlock: function(x,y,z, surfaceType, blockType, orientation)
-	{
-		var surfaceMaterial;
-		switch(surfaceType)
-		{
-			case BLOCK_ENUM.PORTAL_SURFACE:
-				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
-				break;
-			case BLOCK_ENUM.BLACK_SURFACE:
-				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
-				break;
-			case BLOCK_ENUM.NO_SURFACE:
-				//This goes with the air
-				break;
-		}
-
-
-		var mesh;
-		switch(blockType)
-		{
-			case BLOCK_ENUM.AIR:
-				//this is the air block
-				//this will never get used but we want to catch this thing.
-				break;
-			case BLOCK_ENUM.CUBE:
-				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(1,1,1), surfaceMaterial, 0);
-				break;
-			case BLOCK_ENUM.HALF_SLOPE:
-
-				break;
-			case BLOCK_ENUM.CORNER_SLOPE:
-
-				break;
-			case BLOCK_ENUM.INVERSE_CORNER:
-
-				break;
-		}
-
-		mesh.position.set(x + .5, y + .5, z + .5);
-		mesh.castShadow = mesh.receiveShadow = true;
-		mesh.visible = false;
-		this.scene.add(mesh);
-		this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
+	/**
+	 * Clones the geometry, scales it, and returns the result.
+	 * @param geometry the geometry to clone and scale
+	 * @param scale the scale
+	 */
+	scaleGeometry: function(geometry, scale) {
+		var geo = geometry.clone();
+		geo.vertices.forEach(function(v){
+			v.multiply(scale);
+		});
+		return geo;
 	},
 
-	createBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
+	createBlocks: function(position, scale, surfaceType, blockType, orientation)
 	{
-		var surfaceMaterial;
-		switch(surfaceType)
-		{
-			case BLOCK_ENUM.PORTAL_SURFACE:
-				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshLambertMaterial( { color: 0xdddddd } ), .8, .4);
-				break;
-			case BLOCK_ENUM.BLACK_SURFACE:
-				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshLambertMaterial( { color: 0x111111 } ), .8, .4);
-				break;
-			case BLOCK_ENUM.NO_SURFACE:
-				//This goes with the air
-				break;
-		}
-
-		var mesh;
-		var minx = Math.min(x1,x2), miny = Math.min(y1, y2), minz = Math.min(z1,z2);
-		var maxx = Math.max(x1,x2), maxy = Math.max(y1, y2), maxz = Math.max(z1,z2);
-		switch(blockType)
-		{
-			case BLOCK_ENUM.AIR:
-				//this is the air block
-				//this will never get used but we want to catch this thing.
-				break;
-			case BLOCK_ENUM.CUBE:
-				mesh = new Physijs.BoxMesh(new THREE.BoxGeometry(maxx - minx + 1,maxy - miny + 1,maxz - minz + 1), surfaceMaterial, 0);
-				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2)
-				break;
-			case BLOCK_ENUM.HALF_SLOPE:
-                
-				break;
-			case BLOCK_ENUM.CORNER_SLOPE:
-
-				break;
-			case BLOCK_ENUM.INVERSE_CORNER:
-
-				break;
-		}
+		var geo = this.components[blockType].clone().scale(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
+		geo.computeFaceNormals();
+		var mesh = new Physijs.ConvexMesh(geo, this.components[surfaceType], 0);
+		mesh.rotation.copy(this.components[orientation]);
+		mesh.position.copy(position);
 
 		mesh.castShadow = mesh.receiveShadow = true;
         this.data.blockList.push(mesh);
-        if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE)
-        {
+        if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
             this.data.portalBlocks.push(mesh);
         }
         mesh.surfaceType = surfaceType;
 		this.scene.add(mesh);
-
-        //These comments disable the octree.
-		// for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-		// {
-		// 	for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-		// 	{
-		// 		for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
-		// 		{
-		// 			this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
-		// 		}
-		// 	}
-		// }
 	},
 
 	update: function(keystatus, mousestatus) {
@@ -636,18 +404,18 @@ Level.prototype = {
 			var intersects = this.player.raycaster.intersectObjects(this.scene.children);
 			if(intersects[0]) {
 				if(intersects[0].object.surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
+					var norm = intersects[0].face.normal.clone().applyEuler(intersects[0].object.rotation);
 					var dummyObject = new THREE.Object3D;
-					if(Math.abs(intersects[0].face.normal.x) < 0.001 && Math.abs(intersects[0].face.normal.z) < 0.001) {
+					if(Math.abs(norm.x) < 0.001 && Math.abs(norm.z) < 0.001) {
 						dummyObject.up = this.player.raycaster.ray.direction;
 					}
-					dummyObject.lookAt(intersects[0].face.normal);
+					dummyObject.lookAt(norm);
 					var rotation = dummyObject.rotation;
 					rotation.reorder("YXZ");
 					rotation.y += Math.PI; // I don't know why, but shape geometries need this
 					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
 					// check around the location to make sure there's enough room
-					this.raycaster.ray.direction.copy(intersects[0].face.normal);
-					this.raycaster.ray.direction.negate();
+					this.raycaster.ray.direction = norm.negate();
 					var points = 8; // the number of points to check
 					var pass = true;
 					for (var i = 0; i < points; i++) {
