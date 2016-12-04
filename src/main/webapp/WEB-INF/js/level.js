@@ -27,9 +27,10 @@ var Node = function(centerx, centery, centerz, radius, parent) {
 	this.centerY = (typeof centery == "undefined") ? 0 : centery;
 	this.centerZ = (typeof centerz == "undefined") ? 0 : centerz;
 	this.radius = (typeof radius == "undefined") ? 1024 : radius;
-	this.parent = (typeof parent == "undefined") ? null : parent;
+	this.parent = (parent == null || typeof parent == "undefined") ? null : parent;
 	this.octants = [];
 	this.block = BLOCK_ENUM.AIR | BLOCK_ENUM.NO_SURFACE | 0;
+	this.physiBlock = null;
 };
 
 Node.prototype =
@@ -37,15 +38,16 @@ Node.prototype =
 	constructor: Node,
 
 	//For now, always set size to 0. The size thing is unimportant for now.
-	insertBlock: function(x, y, z, size, surfaceType, blockType, orientation)
+	insertBlock: function(x, y, z, size, surfaceType, blockType, orientation, phyBlock)
 	{
 		var octant = this.getOctant(x,y,z);
 		if(this.radius == 0)
 		{
 			this.block = surfaceType | blockType | orientation;
+			this.physiBlock = phyBlock;
 			return;
 		}
-		if(this.octants[octant] == 'undefined')
+		if(typeof this.octants[octant] == 'undefined')
 		{
 			var halfRadius = this.radius / 2;
 			var newX, newY, newZ;
@@ -94,11 +96,11 @@ Node.prototype =
 			}
 			this.octants[octant] = new Node(newX, newY, newZ, halfRadius, this);
 		}
-		
-		this.octants[octant].insertBlock(x, y, z, size, surfaceType, blockType, orientation);
+
+		this.octants[octant].insertBlock(x, y, z, size, surfaceType, blockType, orientation, phyBlock);
 	},
 
-	insertBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
+	insertBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation, phyBlock)
 	{
 		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
 		{
@@ -106,7 +108,7 @@ Node.prototype =
 			{
 				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
 				{
-					this.insertBlock(x, y, z, surfaceType, blockType, orientation);
+					this.insertBlock(x, y, z, surfaceType, blockType, orientation,  phyBlock);
 				}
 			}
 		}
@@ -193,7 +195,7 @@ Node.prototype =
  * @constructor
  */
 var Level = function(data, timestep, settings) {
-	this.data = (typeof data == "undefined") ? this.getDefaultLevelData() : data;
+	this.data = (typeof data == 'undefined') ? this.getDefaultLevelData() : data;
 	this.timestep = (typeof timestep == "undefined") ? 1 / 60: timestep;
 	this.settings = settings;
 	this.portals = [];
@@ -216,9 +218,11 @@ Level.prototype = {
 	getDefaultLevelData: function() {
 		// TODO: this could either be a simple hard-coded platform or something
 		// TODO: or it could actually load a level from the DB designated as the official default base
+
 		return {
 			playerPosition: new THREE.Vector3(0, 10, 0),
-			playerRotation: new THREE.Euler(0, 0, 0, "YXZ")
+			playerRotation: new THREE.Euler(0, 0, 0, "YXZ"),
+			levelTree: new Node(0,0,0,1024,null)
 		};
 	},
 
@@ -295,43 +299,46 @@ Level.prototype = {
 		ground.castShadow = false;
 		this.scene.add(ground);
 
-		var item_material = Physijs.createMaterial(
-			new THREE.MeshLambertMaterial({ color: 0x8888ff }),
-			.8, .4
-		);
-		var box = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(1, 1, 1),
-			item_material, 3
-		);
-		box.position.set(-3, 6, 0);
-		box.castShadow = box.receiveShadow = true;
-		this.scene.add(box);
+		this.createBlocks(-30, 1, -30, 30, 1, 30, BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
 
-		// to test slopes
-		var cone = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 4, 40),
-			item_material,
-			0
-		);
-		cone.position.set(20, 2, 20);
-		cone.castShadow = cone.receiveShadow = true;
-		this.scene.add(cone);
-		var cone2 = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 10, 40),
-			item_material,
-			0
-		);
-		cone2.position.set(20, 5, -20);
-		cone2.castShadow = cone2.receiveShadow = true;
-		this.scene.add(cone2);
-		var cone3 = new Physijs.ConeMesh(
-			new THREE.ConeGeometry(10, 30, 40),
-			item_material,
-			0
-		);
-		cone3.position.set(-20, 15, -20);
-		cone3.castShadow = cone3.receiveShadow = true;
-		this.scene.add(cone3);
+		// var item_material = Physijs.createMaterial(
+		// 	new THREE.MeshLambertMaterial({ color: 0x8888ff }),
+		// 	.8, .4
+		// );
+		// var box = new Physijs.BoxMesh(
+		// 	new THREE.CubeGeometry(1, 1, 1),
+		// 	item_material, 3
+		// );
+		// box.position.set(-3, 6, 0);
+		// box.castShadow = box.receiveShadow = true;
+		// this.scene.add(box);
+        //
+		// //region Code I don't need
+		// // to test slopes
+		// var cone = new Physijs.ConeMesh(
+		// 	new THREE.ConeGeometry(10, 4, 40),
+		// 	item_material,
+		// 	0
+		// );
+		// cone.position.set(20, 2, 20);
+		// cone.castShadow = cone.receiveShadow = true;
+		// this.scene.add(cone);
+		// var cone2 = new Physijs.ConeMesh(
+		// 	new THREE.ConeGeometry(10, 10, 40),
+		// 	item_material,
+		// 	0
+		// );
+		// cone2.position.set(20, 5, -20);
+		// cone2.castShadow = cone2.receiveShadow = true;
+		// this.scene.add(cone2);
+		// var cone3 = new Physijs.ConeMesh(
+		// 	new THREE.ConeGeometry(10, 30, 40),
+		// 	item_material,
+		// 	0
+		// );
+		// cone3.position.set(-20, 15, -20);
+		// cone3.castShadow = cone3.receiveShadow = true;
+		// this.scene.add(cone3);
 
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.settings);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.settings);
@@ -341,29 +348,91 @@ Level.prototype = {
 		this.portals[1].link(this.portals[0]);
 
 		// some test surfaces
-		var shape = new THREE.Shape();
-		shape.lineTo(-2,0.5);
-		shape.lineTo(-2,2.5);
-		shape.lineTo(0,2.5);
-		shape.lineTo(0,6.5);
-		shape.lineTo(4,6.5);
-		shape.lineTo(4,0.5);
-		shape.lineTo(0,0);
-
-		var mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
-		mesh.castShadow = mesh.receiveShadow = true;
-		this.scene.add(mesh.clone());
-		mesh.translateZ(10);
-		mesh.rotation.y = Math.PI;
-		this.scene.add(mesh.clone());
-		mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
-		mesh.translateY(8);
-		mesh.rotation.x = -Math.PI / 4;
-		this.scene.add(mesh.clone());
+		// var shape = new THREE.Shape();
+		// shape.lineTo(-2,0.5);
+		// shape.lineTo(-2,2.5);
+		// shape.lineTo(0,2.5);
+		// shape.lineTo(0,6.5);
+		// shape.lineTo(4,6.5);
+		// shape.lineTo(4,0.5);
+		// shape.lineTo(0,0);
+        //
+		// var mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
+		// mesh.castShadow = mesh.receiveShadow = true;
+		// this.scene.add(mesh.clone());
+		// mesh.translateZ(10);
+		// mesh.rotation.y = Math.PI;
+		// this.scene.add(mesh.clone());
+		// mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
+		// mesh.translateY(8);
+		// mesh.rotation.x = -Math.PI / 4;
+		// this.scene.add(mesh.clone());
 
 		this.updateSettings();
 
 		return this.scene;
+		//endregion
+	},
+
+	createBlock: function(x,y,z, surfaceType, blockType, orientation)
+	{
+		var surfaceMaterial;
+		switch(surfaceType)
+		{
+			case BLOCK_ENUM.PORTAL_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
+				break;
+			case BLOCK_ENUM.BLACK_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
+				break;
+			case BLOCK_ENUM.NO_SURFACE:
+				//This goes with the air
+				break;
+		}
+
+
+		var mesh;
+		switch(blockType)
+		{
+			case BLOCK_ENUM.AIR:
+				//this is the air block
+				//this will never get used but we want to catch this thing.
+				break;
+			case BLOCK_ENUM.CUBE:
+				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(1,1,1), surfaceMaterial, 0);
+				break;
+			case BLOCK_ENUM.HALF_SLOPE:
+
+				break;
+			case BLOCK_ENUM.CORNER_SLOPE:
+
+				break;
+			case BLOCK_ENUM.INVERSE_CORNER:
+
+				break;
+		}
+
+		mesh.position.set(x + .5, y + .5, z + .5);
+		mesh.castShadow = mesh.receiveShadow = true;
+		mesh.visible = false;
+		this.scene.add(mesh);
+		this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
+	},
+
+	createBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
+	{
+		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
+		{
+			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
+			{
+				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
+				{
+					this.createBlock(x, y, z, surfaceType, blockType, orientation);
+				}
+			}
+		}
 	},
 
 	update: function(keystatus, mousestatus) {
