@@ -37,9 +37,9 @@ public class MainController {
 	 */
 	@RequestMapping("")
 	public String home(HttpServletRequest request, Model model) {
-		//LevelDAO dao = DAOFactory.getLevelDAO(servletContext);
-		//model.addAttribute("message", dao.getLevel("test", ""));
-		model.addAttribute("message", "Hello");
+		LevelDAO dao = DAOFactory.getLevelDAO(servletContext);
+		model.addAttribute("message", dao.getLevel("test", ""));
+		//model.addAttribute("message", "Hello");
 		return "main";
 	}
 

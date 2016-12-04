@@ -14,9 +14,9 @@
 	<script type="text/javascript" src="<c:url value='/js/physijs/physi.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/threejs/SkyShader.js' />"></script>
 
+	<script type="text/javascript" src="<c:url value='/js/level.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/portal.js' />"></script>
 	<script type="text/javascript" src="<c:url value='/js/player.js' />"></script>
-	<script type="text/javascript" src="<c:url value='/js/level.js' />"></script>
 
 	<script type="text/javascript">
 		'use strict';
