@@ -21,11 +21,10 @@ body {
 	height: 100%;
 	/* dark transparency */
 	background-color: rgba(0, 0, 0, 0.5);
-	/* send to front of page */
-	z-index: 100;
+	z-index: 101;
 }
 
-#pauseMenu {
+#pauseMenu, #editMenu {
 	position: absolute;
 	left: 50%;
 	top: 50%;
@@ -36,6 +35,10 @@ body {
 
 	text-align: center;
 	color: white;
+}
+
+#editMenu {
+	display: none; /* hidden at launch */
 }
 
 #graphicsMenuDropdown {
@@ -67,6 +70,10 @@ body {
 	color: inherit;
 }
 
+#editMenu td {
+	cursor: pointer;
+}
+
 #debug {
 	position: absolute;
 	top: 50px;
@@ -79,4 +86,9 @@ body {
 	text-align: right;
 	font-weight: bold;
 	padding-right: 4px;
+}
+
+th {
+	font-size: 140%;
+	font-weight: bold;
 }
