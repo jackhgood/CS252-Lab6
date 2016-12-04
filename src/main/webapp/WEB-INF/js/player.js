@@ -234,7 +234,7 @@ Player.prototype = {
 			} else {
 				if(this.prevMouseState) {
 					// place the blocks
-					this.level.data.levelTree.insertBlocks(
+					this.level.createBlocks(
 						selectPosition.x, selectPosition.y, selectPosition.z,
 						this.selectionStart.x, this.selectionStart.y, this.selectionStart.z,
 						this.selectedSurface, this.selectedBlock, this.selectedOrientation

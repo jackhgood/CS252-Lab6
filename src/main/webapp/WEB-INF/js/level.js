@@ -300,7 +300,7 @@ Level.prototype = {
 		this.scene.add(ground);
 
 		this.createBlocks(-30, 1, -30, 30, 1, 30, BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
-
+		this.createBlocks(-5, 2, -5, 5, 2, 2, BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
 		// var item_material = Physijs.createMaterial(
 		// 	new THREE.MeshLambertMaterial({ color: 0x8888ff }),
 		// 	.8, .4
@@ -374,6 +374,7 @@ Level.prototype = {
 		//endregion
 	},
 
+	//This function is useless since it creates to many blocks
 	createBlock: function(x,y,z, surfaceType, blockType, orientation)
 	{
 		var surfaceMaterial;
@@ -421,9 +422,6 @@ Level.prototype = {
 		this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
 	},
 
-	//Upon testing this we found that creating so many small individual blocks is really laggy.
-	//If we use convex meshes that are larger (and possibly more visually appealing)
-	//then we should be able to increase our performance by a lot.
 	createBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
 	{
 		var surfaceMaterial;
@@ -431,11 +429,11 @@ Level.prototype = {
 		{
 			case BLOCK_ENUM.PORTAL_SURFACE:
 				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
+					new THREE.MeshLambertMaterial( { color: 0xdddddd } ), .8, .4);
 				break;
 			case BLOCK_ENUM.BLACK_SURFACE:
 				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
+					new THREE.MeshLambertMaterial( { color: 0x111111 } ), .8, .4);
 				break;
 			case BLOCK_ENUM.NO_SURFACE:
 				//This goes with the air
@@ -443,6 +441,8 @@ Level.prototype = {
 		}
 
 		var mesh;
+		var minx = Math.min(x1,x2), miny = Math.min(y1, y2), minz = Math.min(z1,z2);
+		var maxx = Math.max(x1,x2), maxy = Math.max(y1, y2), maxz = Math.max(z1,z2);
 		switch(blockType)
 		{
 			case BLOCK_ENUM.AIR:
@@ -450,22 +450,16 @@ Level.prototype = {
 				//this will never get used but we want to catch this thing.
 				break;
 			case BLOCK_ENUM.CUBE:
-				//just create a big cube filling the space.
-				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(x1 - x2 + 1,y1 - y2 + 1,z1 - z2 + 1), surfaceMaterial, 0);
-				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2);
+				mesh = new Physijs.BoxMesh(new THREE.BoxGeometry(maxx - minx + 1,maxy - miny + 1,maxz - minz + 1), surfaceMaterial, 0);
+				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2)
 				break;
 			case BLOCK_ENUM.HALF_SLOPE:
-				//I think it would be neat to create a slope with vertices at the corners
-				//in the orientation selected
 
 				break;
 			case BLOCK_ENUM.CORNER_SLOPE:
-				//Same as the halfslope.
 
 				break;
 			case BLOCK_ENUM.INVERSE_CORNER:
-				//Becuase of how Im thinking of doing this, it will basically make this
-				//shape no longer have a purpose.
 
 				break;
 		}
@@ -479,7 +473,7 @@ Level.prototype = {
 			{
 				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
 				{
-					this.data.levelTree.insertBlocks(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation, mesh);
+					this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
 				}
 			}
 		}
