@@ -1,12 +1,12 @@
 /**
  * Constructor for Player.
  * Adds the camera and player physics objects to the scene.
- * @param scene the Physijs.scene the player will belong to
+ * @param level the level the player will belong to
  * @param timestep the expected time between physics simulations
  * @param settings the gameplay settings
  * @constructor
  */
-var Player = function(scene, timestep, settings) {
+var Player = function(level, timestep, settings) {
 
 	// general player settings
 	this.speed = 5;
@@ -21,7 +21,7 @@ var Player = function(scene, timestep, settings) {
 	this.mode = 0; // 0 = player, 1 = edit
 	this.diam = 5;
 
-	this.scene = scene;
+	this.level = level;
 	this.timestep = timestep;
 	this.settings = settings;
 	// TODO: we may have to scale the world before rendering or something so near and far aren't such a huge gap
@@ -48,7 +48,7 @@ var Player = function(scene, timestep, settings) {
 	crosshair.position.z = -0.5;
 	this.camera.add(crosshair);
 
-	scene.add(this.camera);
+	this.level.scene.add(this.camera);
 
 	// build the player's physical body
 	// the main section is low-friction to avoid clinging to walls
@@ -63,7 +63,7 @@ var Player = function(scene, timestep, settings) {
 		0.5 * this.mass
 	);
 	this.body.visible = false;
-	scene.add(this.body);
+	this.level.scene.add(this.body);
 	// lock all rotation, producing a rigid player
 	// must be called after adding to scene, not before
 	this.body.setAngularFactor(new THREE.Vector3(0, 0, 0));
@@ -89,23 +89,25 @@ var Player = function(scene, timestep, settings) {
 			// TODO: maybe put an impact sound or something for hitting the ground
 		}
 	);
-	scene.add(this.foot);
+	this.level.scene.add(this.foot);
 	this.foot._physijs.collision_flags = 4;
 	// if you are reading this and want to have some fun, comment out the next line and set debug to true in game.jsp
 	this.foot.setAngularFactor(new THREE.Vector3(0, 0, 0));
 
 	// bind the body parts together
 	var constraint = new Physijs.DOFConstraint(this.foot, this.body, this.foot.position);
-	scene.addConstraint(constraint);
+	this.level.scene.addConstraint(constraint);
 
-
-	var selectionbox = new THREE.BoxGeometry(1.05,1.05,1.05);
+	// add the selection box for editing mode
+	this.selectionSize = 1.05;
+	var selectionbox = new THREE.BoxGeometry(this.selectionSize, this.selectionSize, this.selectionSize);
 	var selectionedge = new THREE.EdgesGeometry(selectionbox);
 	var selectionmaterial = new THREE.LineBasicMaterial( { color: 0x32cd32, linewidth: 2 } );
-	this.selection = new THREE.LineSegments( selectionedge, selectionmaterial );
-	this.selection.position.set(10, 10, 10);
-	scene.add(this.selection);
-
+	this.selection = new THREE.LineSegments(selectionedge, selectionmaterial);
+	this.selection.visible = false;
+	this.level.scene.add(this.selection);
+	this.selectionStart = new THREE.Vector3(); // for click and drag
+	this.prevMouseState = false;
 
 	// initialize a special short-range raycaster that determines whether the player is on the ground
 	this.onGround = false;
@@ -113,10 +115,10 @@ var Player = function(scene, timestep, settings) {
 	this.groundcaster.far = 0.2 * this.height;
 	if(settings.debug) {
 		this.groundcasterLine = new THREE.Line(new THREE.Geometry(), new THREE.MeshBasicMaterial({ color: 0x6666ff }));
-		scene.add(this.groundcasterLine);
+		this.level.scene.add(this.groundcasterLine);
 		this.groundcasterLine.visible = false;
 		this.groundcasterPoint = new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshBasicMaterial({ color: 0xffff66 }));
-		scene.add(this.groundcasterPoint);
+		this.level.scene.add(this.groundcasterPoint);
 		this.groundcasterPoint.visible = false;
 	}
 
@@ -142,13 +144,14 @@ Player.prototype = {
 
 	/**
 	 * Moves the player around the world.
-	 * @param keystatus ascii-indexed keyboard states
+	 * @param keystatus keyboard states
+	 * @param mousestatus mouse button states
 	 */
-	update: function(keystatus) {
+	update: function(keystatus, mousestatus) {
 		// use our short range raycaster to see if the player is on the ground
 		this.onGround = false;
 		this.groundcaster.set(this.foot.position, new THREE.Vector3(0, -1, 0));
-		var intersects = this.groundcaster.intersectObjects(this.scene.children);
+		var intersects = this.groundcaster.intersectObjects(this.level.scene.children);
 		for(var i = 0; i < intersects.length; i++) {
 			if(!(intersects[i].object == this.foot || intersects[i].object == this.body
 				|| (this.settings.debug && (intersects[i].object == this.groundcasterLine || intersects[i].object == this.groundcasterPoint)))) {
@@ -162,6 +165,8 @@ Player.prototype = {
 		var A = keystatus[65];
 		var S = keystatus[83];
 		var D = keystatus[68];
+		var Space = keystatus[32];
+		var Shift = keystatus[16];
 		var speed, acceleration;
 
 		acceleration = (this.onGround ? this.acceleration : this.airAcceleration) * this.timestep;
@@ -169,7 +174,7 @@ Player.prototype = {
 
 		// HACK to increase speed for testing
 		// TODO: get rid of this when done testing
-		if(keystatus[16]) // Shift
+		if(keystatus[37] && this.settings.debug) // C
 			speed *= 10;
 
 		// compensate for portals messing up z-rotation
@@ -202,6 +207,43 @@ Player.prototype = {
 			if (D && !A) {
 				this.camera.translateX(speed*timestep);
 			}
+			if(Space && !Shift) {
+				this.camera.translateY(speed*timestep);
+			}
+			if(Shift && !Space) {
+				this.camera.translateY(-speed*timestep);
+			}
+
+			// update the selection position
+			var selectPosition = new THREE.Vector3(0, 0, -this.diam).applyEuler(this.camera.rotation).add(this.camera.position);
+			selectPosition.x = Math.floor(selectPosition.x);
+			selectPosition.y = Math.floor(selectPosition.y);
+			selectPosition.z = Math.floor(selectPosition.z);
+			if(mousestatus[1]) {
+				this.selection.scale.x = selectPosition.x - this.selectionStart.x;
+				this.selection.scale.y = selectPosition.y - this.selectionStart.y;
+				this.selection.scale.z = selectPosition.z - this.selectionStart.z;
+				this.selection.scale.x += this.selection.scale.x == 0 ? 1 : Math.sign(this.selection.scale.x);
+				this.selection.scale.y += this.selection.scale.y == 0 ? 1 : Math.sign(this.selection.scale.y);
+				this.selection.scale.z += this.selection.scale.z == 0 ? 1 : Math.sign(this.selection.scale.z);
+				this.selection.position.copy(selectPosition.add(this.selectionStart).multiplyScalar(0.5));
+			} else {
+				this.selection.scale.x = 1;
+				this.selection.scale.y = 1;
+				this.selection.scale.z = 1;
+				this.selectionStart = selectPosition;
+				this.selection.position.copy(selectPosition);
+			}
+			// grid align it
+			this.selection.position.x = this.selection.position.x + 0.5;
+			this.selection.position.y = this.selection.position.y + 0.5;
+			this.selection.position.z = this.selection.position.z + 0.5;
+			this.selection.__dirtyPosition = true;
+
+			if(this.prevMouseState == true && mousestatus[1] == false) {
+				// place the blocks
+			}
+			this.prevMouseState = mousestatus[1];
 		}
 		else { // Player Mode
 			// get the current velocity, rotated to local space
@@ -252,7 +294,7 @@ Player.prototype = {
 			v.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camera.rotation.y);
 
 			// jump
-			if (keystatus[32]) { // Space
+			if (Space) {
 				keystatus[32] = false;
 				if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
 			}
@@ -261,10 +303,17 @@ Player.prototype = {
 		}
 
 
-		// switchmode
+		// switch mode
 		if (keystatus [77]) {
 			keystatus[77] = false;
-			this.switchModes();
+			if(this.mode) { // In edit mode
+				this.mode = 0; // switch to play mode
+				this.selection.visible = false;
+				this.prevMouseState = false;
+			} else { // In player mode
+				this.mode = 1; // switch to edit mode
+				this.selection.visible = true;
+			}
 		}
 
 
@@ -347,16 +396,6 @@ Player.prototype = {
 			this.groundcasterLine.visible = true;
 			this.groundcasterPoint.visible = true;
 		}
-	},
-
-	switchModes: function() {
-		if(this.mode) { // In edit mode
-			this.mode = 0;
-		}
-		else { //In player mode
-			this.mode = 1;
-		}
-
 	}
 
 };

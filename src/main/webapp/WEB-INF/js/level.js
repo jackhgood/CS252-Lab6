@@ -63,7 +63,7 @@ Level.prototype = {
 		this.scene.setGravity(new THREE.Vector3(0, -30, 0));
 
 		// player
-		this.player = new Player(this.scene, this.timestep, this.settings);
+		this.player = new Player(this, this.timestep, this.settings);
 		this.player.set(this.data.playerPosition, this.data.playerRotation);
 
 		// sky
@@ -196,8 +196,8 @@ Level.prototype = {
 		return this.scene;
 	},
 
-	update: function(keystatus) {
-		this.player.update(keystatus);
+	update: function(keystatus, mousestatus) {
+		this.player.update(keystatus, mousestatus);
 		this.player.prepCamera();
 		for(var i = 0; i < this.portals.length; i++) {
 			// the dot product of the portal's normal with the vector to the player's position

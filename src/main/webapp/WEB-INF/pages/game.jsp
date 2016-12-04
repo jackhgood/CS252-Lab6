@@ -42,7 +42,8 @@
 		  					 // (unless we can find some way around this) (TODO)
 
 		// other
-		var keystatus = []; // ascii-indexed states of all the keys on the keyboard
+		var mousestatus = []; // states of the mouse buttons
+		var keystatus = []; // states of all the keys on the keyboard
 		var keylock = []; // used to keep keys from auto-pressing when held down
 		var keycontrol;
 		var paused = true;
@@ -177,6 +178,22 @@
 			);
 
 			document.addEventListener(
+					"mousedown",
+					function(event) {
+						// TODO: make sure this doesn't catch the click that unpauses the game
+						mousestatus[event.which] = true;
+					}
+			);
+
+			document.addEventListener(
+					"mouseup",
+					function(event) {
+						// TODO: make sure this doesn't catch the click that unpauses the game
+						mousestatus[event.which] = false;
+					}
+			);
+
+			document.addEventListener(
 					"mousemove",
 					function(event) {
 						if(!paused) {
@@ -275,7 +292,7 @@
 		 * Used to trigger player's change of position as result of controls input.
 		 */
 		gameUpdate = function() {
-			level.update(keystatus);
+			level.update(keystatus, mousestatus);
 		};
 
 		/**
