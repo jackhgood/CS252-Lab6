@@ -228,6 +228,14 @@ Player.prototype = {
 				this.selection.scale.z += this.selection.scale.z == 0 ? 1 : Math.sign(this.selection.scale.z);
 				this.selection.position.copy(selectPosition.add(this.selectionStart).multiplyScalar(0.5));
 			} else {
+				if(this.prevMouseState) {
+					// place the blocks
+					this.level.data.levelTree.insertBlocks(
+						selectPosition.x, selectPosition.y, selectPosition.z,
+						this.selectionStart.x, this.selectionStart.y, this.selectionStart.z,
+						BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0
+					);
+				}
 				this.selection.scale.x = 1;
 				this.selection.scale.y = 1;
 				this.selection.scale.z = 1;
@@ -240,9 +248,6 @@ Player.prototype = {
 			this.selection.position.z = this.selection.position.z + 0.5;
 			this.selection.__dirtyPosition = true;
 
-			if(this.prevMouseState == true && mousestatus[1] == false) {
-				// place the blocks
-			}
 			this.prevMouseState = mousestatus[1];
 		}
 		else { // Player Mode
