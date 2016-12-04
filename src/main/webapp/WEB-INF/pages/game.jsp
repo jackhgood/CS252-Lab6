@@ -216,6 +216,16 @@
 			);
 
 			document.addEventListener(
+					"wheel",
+					function(event) {
+						event = window.event || event;
+						if(!paused && level.player.mode) {
+							level.player.diam += 0.5 * Math.sign(event.wheelDelta || -event.detail);
+						}
+					}
+			);
+
+			document.addEventListener(
 					"click",
 					function(event) {
 						// TODO: make sure this doesn't catch the click that unpauses the game

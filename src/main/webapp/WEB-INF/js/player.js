@@ -252,6 +252,17 @@ Player.prototype = {
 			this.selection.position.z = this.selection.position.z + 0.5;
 			this.selection.__dirtyPosition = true;
 
+			// set the orientation
+			if(keystatus[90]) { // Z
+				this.selectedOrientation++;
+				keystatus[90] = false;
+			}
+			if(keystatus[88]) { // X
+				this.selectedOrientation += 4;
+				keystatus[88] = false;
+			}
+			this.selectedOrientation %= 12;
+
 			this.prevMouseState = mousestatus[1];
 		}
 		else { // Player Mode

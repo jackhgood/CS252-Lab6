@@ -203,8 +203,8 @@ var Level = function(data, timestep, settings) {
 	this.playerPortalValues = [];
 	// used for checking if portals are valid
 	this.raycaster = new THREE.Raycaster();
-	this.raycaster.near = -1;
-	this.raycaster.far = 1;
+	this.raycaster.near = -0.1;
+	this.raycaster.far = 0.1;
 };
 
 Level.prototype = {
@@ -635,26 +635,28 @@ Level.prototype = {
 			this.player.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.player.camera);
 			var intersects = this.player.raycaster.intersectObjects(this.scene.children);
 			if(intersects[0]) {
-				if(intersects[0].surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
+				if(intersects[0].object.surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
 					var dummyObject = new THREE.Object3D;
+					if(Math.abs(intersects[0].face.normal.x) < 0.001 && Math.abs(intersects[0].face.normal.z) < 0.001) {
+						dummyObject.up = this.player.raycaster.ray.direction;
+					}
 					dummyObject.lookAt(intersects[0].face.normal);
 					var rotation = dummyObject.rotation;
 					rotation.reorder("YXZ");
 					rotation.y += Math.PI; // I don't know why, but shape geometries need this
 					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
 					// check around the location to make sure there's enough room
-					this.raycaster.ray.direction = this.player.raycaster.ray.direction;
+					this.raycaster.ray.direction.copy(intersects[0].face.normal);
+					this.raycaster.ray.direction.negate();
 					var points = 8; // the number of points to check
 					var pass = true;
-					var count = [];
 					for (var i = 0; i < points; i++) {
 						var theta = i / points * 2 * Math.PI;
 						this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
 							.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
 							.add(intersects[0].point);
-						if (this.raycaster.intersectObject(intersects[0].object).length == 0) {
-							count.push(i);
-							//pass = false;
+						if (this.raycaster.intersectObjects(this.data.portalBlocks).length == 0) {
+							pass = false;
 							break;
 						}
 					}
