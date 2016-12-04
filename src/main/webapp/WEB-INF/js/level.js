@@ -222,7 +222,9 @@ Level.prototype = {
 		return {
 			playerPosition: new THREE.Vector3(0, 10, 0),
 			playerRotation: new THREE.Euler(0, 0, 0, "YXZ"),
-			levelTree: new Node(0,0,0,1024,null)
+			levelTree: new Node(0,0,0,1024,null),
+            blockList: [],
+            portalBlocks: []
 		};
 	},
 
@@ -465,18 +467,24 @@ Level.prototype = {
 		}
 
 		mesh.castShadow = mesh.receiveShadow = true;
+        this.data.blockList.push(mesh);
+        if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE)
+        {
+            this.data.portalBlocks.push(mesh);
+        }
 		this.scene.add(mesh);
 
-		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
-		{
-			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
-			{
-				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
-				{
-					this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
-				}
-			}
-		}
+        //These comments disable the octree.
+		// for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
+		// {
+		// 	for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
+		// 	{
+		// 		for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
+		// 		{
+		// 			this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
+		// 		}
+		// 	}
+		// }
 	},
 
 	update: function(keystatus, mousestatus) {
