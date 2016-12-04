@@ -251,8 +251,8 @@ Level.prototype = {
 		// now that the camera is cloned, move it to the boy
 		this.player.prepCamera();
 
-		var inclination = 0.4; // -1 to 1
-		var azimuth = 0.25;
+		var inclination = 0.3; // 0 to 0.5
+		var azimuth = 0.125;
 		sky.uniforms.turbidity.value = 10;
 		sky.uniforms.rayleigh.value = 2;
 		sky.uniforms.luminance.value = 1;
@@ -264,7 +264,7 @@ Level.prototype = {
 
 		// TODO: lighting is kind of arbitrary at the moment. Ideally it would be given a saveable setting
 		// lighting
-		this.scene.add(new THREE.AmbientLight(0x404040));
+		this.scene.add(new THREE.AmbientLight(0x777777));
 		// TODO: toy with the possibility of yellowish light to simulate sunlight, depending on time of day
 		// TODO: Godrays?!?!??! no, probably not :(
 		this.light = new THREE.DirectionalLight(0xffffff);
@@ -626,32 +626,36 @@ Level.prototype = {
 			this.player.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.player.camera);
 			var intersects = this.player.raycaster.intersectObjects(this.scene.children);
 			if(intersects[0]) {
-				var rotation = intersects[0].object.rotation.clone();
-				rotation.reorder("YXZ");
-				rotation.y += Math.PI; // I don't know why, but shape geometries need this
-				var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
-				// check around the location to make sure there's enough room
-				this.raycaster.ray.direction = this.player.raycaster.ray.direction;
-				var points = 8; // the number of points to check
-				var pass = true;
-				var count = [];
-				for(var i = 0; i < points; i++) {
-					var theta = i / points * 2 * Math.PI;
-					this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
-						.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
-						.add(intersects[0].point);
-					if(this.raycaster.intersectObject(intersects[0].object).length == 0) {
-						count.push(i);
-						pass = false;
-						break;
+				if(intersects[0].surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
+					var dummyObject = new THREE.Object3D;
+					dummyObject.lookAt(intersects[0].face.normal);
+					var rotation = dummyObject.rotation;
+					rotation.reorder("YXZ");
+					rotation.y += Math.PI; // I don't know why, but shape geometries need this
+					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
+					// check around the location to make sure there's enough room
+					this.raycaster.ray.direction = this.player.raycaster.ray.direction;
+					var points = 8; // the number of points to check
+					var pass = true;
+					var count = [];
+					for (var i = 0; i < points; i++) {
+						var theta = i / points * 2 * Math.PI;
+						this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
+							.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
+							.add(intersects[0].point);
+						if (this.raycaster.intersectObject(intersects[0].object).length == 0) {
+							count.push(i);
+							//pass = false;
+							break;
+						}
 					}
-				}
 
-				if(pass) {
-					var other = this.portals[button].other;
-					portal.link(other);
-					other.link(portal);
-					this.portals[button] = portal;
+					if (pass) {
+						var other = this.portals[button].other;
+						portal.link(other);
+						other.link(portal);
+						this.portals[button] = portal;
+					}
 				}
 
 			}

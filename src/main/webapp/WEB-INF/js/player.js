@@ -79,7 +79,7 @@ var Player = function(level, timestep, settings) {
 		0 // no restitution
 	);
 	this.foot = new Physijs.ConeMesh(
-		new THREE.ConeGeometry(0.45 * this.width, 0.2 * this.height, 12),
+		new THREE.ConeGeometry(0.4 * this.width, 0.2 * this.height, 12),
 		footMaterial,
 		0.5 * this.mass
 	);
