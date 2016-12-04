@@ -25,15 +25,15 @@
 		Physijs.scripts.ammo = "<c:url value='/js/physijs/ammo.js' />";
 
 		// functions
-		var init, gameUpdate, debugUpdate, render, startLevel;
+		var init, gameUpdate, debugUpdate, render, startLevel, updateUi;
 
 		// visual elements
-		var viewport, renderer, render_stats, physics_stats, level;
+		var viewport, renderer, render_stats, physics_stats, level, pointerlockElement;
 
 		// settings
 		var settings = {
 			// generally, 0 is low quality, 1 is medium, 2 is high
-			debug: true, // set to true to show additional things to help with debugging physics & rendering
+			debug: false, // set to true to show additional things to help with debugging physics & rendering
 			shadowQuality: 2,
 			portalQuality: 2,
 			portalRecursions: 5
@@ -84,24 +84,31 @@
 			// based heavily on https://threejs.org/examples/misc_controls_pointerlock.html
 			// different browsers use different naming schemes, hence the "moz" and "webkit"
 			// however, all browsers conventiently seem to exit pointer lock when escape is pressed
+			pointerlockElement = document.getElementById("pauseOverlay");
 			if("pointerLockElement" in document || "mozPointerLockElement" in document || "webkitPointerLockElement" in document) {
-				// the element which governs the pointer lock
-				var element = document.getElementById("pauseOverlay");
-
 				// pointer lock event handlers
 				var pointerlockchange = function(event) {
 					event.stopPropagation();
-					if(document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element){
+					if(document.pointerLockElement === pointerlockElement || document.mozPointerLockElement === pointerlockElement || document.webkitPointerLockElement === pointerlockElement){
 						// unpause
-						element.style.display = "none";
+						pointerlockElement.style.display = "none";
+						level.player.crosshair.visible = true;
 						paused = false;
 						level.scene.onSimulationResume();
 						level.scene.simulate();
 					} else {
 						// pause
-						graphicsMenu.style.display = "none";
+						level.player.crosshair.visible = false;
+						if(keystatus[69]) { // E
+							pauseMenu.style.display = "none";
+							editMenu.style.display = "block";
+						} else { // escape
+							pauseMenu.style.display = "block";
+							editMenu.style.display = "none";
+							graphicsMenu.style.display = "none";
+						}
 						graphicsMenuDropdown.innerHTML = "&#9654 Graphics Settings";
-						element.style.display = "block";
+						pointerlockElement.style.display = "block";
 						paused = true;
 					}
 				};
@@ -119,9 +126,10 @@
 
 				// attempt to lock the pointer when the element is clicked
 				// TODO: use the viewport as the click handler for clicking while in-game
-				element.addEventListener("click", function(event) {
+				pointerlockElement.addEventListener("click", function(event) {
 					// request that the browser lock the pointer
-					element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+					pointerlockElement.requestPointerLock = pointerlockElement.requestPointerLock || pointerlockElement.mozRequestPointerLock || pointerlockElement.webkitRequestPointerLock;
+					document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock || document.webkitExitPointerLock;
 					// TODO: support fullscreen
 					/*if(/Firefox/i.test(navigator.userAgent)) { // TODO: what on earth does this mean?
 						var fullscreenchange = function(event){
@@ -137,7 +145,7 @@
 						element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
 						element.requestFullscreen();
 						*/
-					element.requestPointerLock();
+					pointerlockElement.requestPointerLock();
 				});
 			} else {
 				// TODO: investigate whether any modern browsers do this
@@ -159,11 +167,14 @@
 							keystatus[event.keyCode] = true;
 							keylock[event.keyCode] = true;
 							keycontrol = event.ctrlKey;
-						}
-						switch(event.keyCode) {
-							case 86: // V
-								if(settings.debug) level.player.toggleThirdPerson();
-								break;
+							switch(event.keyCode) {
+								case 69: // E
+									document.exitPointerLock();
+									break;
+								case 86: // V
+									if(settings.debug) level.player.toggleThirdPerson();
+									break;
+							}
 						}
 					}
 			);
@@ -223,10 +234,12 @@
 					}
 			);
 
-			// graphics menu event handlers
 			var graphicsMenu = document.getElementById("graphicsMenu");
 			var graphicsMenuDropdown = document.getElementById("graphicsMenuDropdown");
+			var pauseMenu = document.getElementById("pauseMenu");
+			var editMenu = document.getElementById("editMenu");
 
+			// graphics menu event handlers
 			graphicsMenuDropdown.addEventListener(
 					"click",
 					function(event) {
@@ -281,6 +294,16 @@
 			document.getElementById("portalButton" + settings.portalQuality).checked = true;
 			document.getElementById("portalRecursionsSlider").value = settings.portalRecursions;
 			document.getElementById("portalRecursionsValue").innerHTML = settings.portalRecursions.toString();
+
+			editMenu.addEventListener(
+					"click",
+					function(event) {
+						event.stopPropagation();
+					}
+			);
+
+			updateUi(0, 0);
+			updateUi(1, 0);
 
 			// begin
 			startLevel();
@@ -348,6 +371,25 @@
 			}
 
 			if(settings.debug) render_stats.update();
+		};
+
+		/**
+		 * Recolor the block picking gui.
+		 */
+		updateUi = function(col, selection) {
+			var i;
+			if(col == 0) {
+				for(i = 0; i < 4; i++) {
+					if(selection == i) document.getElementById("surface" + i).style.color = "white";
+					else document.getElementById("surface" + i).style.color = "gray";
+				}
+			}
+			if(col == 1) {
+				for(i = 0; i < 4; i++) {
+					if(selection == i) document.getElementById("block" + i).style.color = "white";
+					else document.getElementById("block" + i).style.color = "gray";
+				}
+			}
 		};
 
 		/**
@@ -435,6 +477,28 @@
 				<button id="graphicsApplyButton">Apply</button>
 
 			</div>
+		</div>
+		<div id="editMenu">
+			<table id="editSelect">
+				<!-- TODO: this is a terrible way to handle this. If you know of a better way, please do swap it in. -->
+				<tr><th>Material</th><th>Shape</th></tr>
+				<tr>
+					<td id="surface0" onclick="level.player.selectedSurface = BLOCK_ENUM.PORTAL_SURFACE; updateUi(0, 0);">Portal Surface</td>
+					<td id="block0" onclick="level.player.selectedBlock = BLOCK_ENUM.CUBE; updateUi(1, 0);">Cube</td>
+				</tr>
+				<tr>
+					<td id="surface1" onclick="level.player.selectedSurface = BLOCK_ENUM.BLACK_SURFACE; updateUi(0, 1);">Normal Surface</td>
+					<td id="block1" onclick="level.player.selectedBlock = BLOCK_ENUM.HALF_SLOPE; updateUi(1, 1);">Slope</td>
+				</tr>
+				<tr>
+					<td id="surface2"></td>
+					<td id="block2" onclick="level.player.selectedBlock = BLOCK_ENUM.CORNER_SLOPE; updateUi(1, 2);">Tetra</td>
+				</tr>
+				<tr>
+					<td id="surface3"></td>
+					<td id="block3" onclick="level.player.selectedBlock = BLOCK_ENUM.INVERSE_CORNER; updateUi(1, 3);">Anti-tetra</td>
+				</tr>
+			</table>
 		</div>
 	</div>
 </div>

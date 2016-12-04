@@ -20,6 +20,9 @@ var Player = function(level, timestep, settings) {
 	this.friction = 2.2;
 	this.mode = 0; // 0 = player, 1 = edit
 	this.diam = 5;
+	this.selectedSurface = BLOCK_ENUM.PORTAL_SURFACE;
+	this.selectedBlock = BLOCK_ENUM.CUBE;
+	this.selectedOrientation = 0;
 
 	this.level = level;
 	this.timestep = timestep;
@@ -44,9 +47,10 @@ var Player = function(level, timestep, settings) {
 	geo.vertices.push(new THREE.Vector3(0.01, 0, 0));
 	geo.vertices.push(new THREE.Vector3(-0.01, 0, 0));
 
-	var crosshair = new THREE.Line(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-	crosshair.position.z = -0.5;
-	this.camera.add(crosshair);
+	this.crosshair = new THREE.Line(geo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+	this.crosshair.position.z = -0.5;
+	this.camera.add(this.crosshair);
+	this.crosshair.visible = false;
 
 	this.level.scene.add(this.camera);
 
@@ -233,7 +237,7 @@ Player.prototype = {
 					this.level.data.levelTree.insertBlocks(
 						selectPosition.x, selectPosition.y, selectPosition.z,
 						this.selectionStart.x, this.selectionStart.y, this.selectionStart.z,
-						BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0
+						this.selectedSurface, this.selectedBlock, this.selectedOrientation
 					);
 				}
 				this.selection.scale.x = 1;
