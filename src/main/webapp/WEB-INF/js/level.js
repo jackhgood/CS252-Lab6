@@ -374,6 +374,7 @@ Level.prototype = {
 		//endregion
 	},
 
+	//This function is useless since it creates to many blocks
 	createBlock: function(x,y,z, surfaceType, blockType, orientation)
 	{
 		var surfaceMaterial;
@@ -428,11 +429,11 @@ Level.prototype = {
 		{
 			case BLOCK_ENUM.PORTAL_SURFACE:
 				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
+					new THREE.MeshLambertMaterial( { color: 0xdddddd } ), .8, .4);
 				break;
 			case BLOCK_ENUM.BLACK_SURFACE:
 				surfaceMaterial = Physijs.createMaterial(
-					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
+					new THREE.MeshLambertMaterial( { color: 0x111111 } ), .8, .4);
 				break;
 			case BLOCK_ENUM.NO_SURFACE:
 				//This goes with the air
@@ -440,6 +441,8 @@ Level.prototype = {
 		}
 
 		var mesh;
+		var minx = Math.min(x1,x2), miny = Math.min(y1, y2), minz = Math.min(z1,z2);
+		var maxx = Math.max(x1,x2), maxy = Math.max(y1, y2), maxz = Math.max(z1,z2);
 		switch(blockType)
 		{
 			case BLOCK_ENUM.AIR:
@@ -447,7 +450,7 @@ Level.prototype = {
 				//this will never get used but we want to catch this thing.
 				break;
 			case BLOCK_ENUM.CUBE:
-				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(x1 - x2 + 1,y1 - y2 + 1,z1 - z2 + 1), surfaceMaterial, 0);
+				mesh = new Physijs.BoxMesh(new THREE.BoxGeometry(maxx - minx + 1,maxy - miny + 1,maxz - minz + 1), surfaceMaterial, 0);
 				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2)
 				break;
 			case BLOCK_ENUM.HALF_SLOPE:
