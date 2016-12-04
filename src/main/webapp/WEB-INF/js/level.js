@@ -421,15 +421,65 @@ Level.prototype = {
 		this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
 	},
 
+	//Upon testing this we found that creating so many small individual blocks is really laggy.
+	//If we use convex meshes that are larger (and possibly more visually appealing)
+	//then we should be able to increase our performance by a lot.
 	createBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
 	{
+		var surfaceMaterial;
+		switch(surfaceType)
+		{
+			case BLOCK_ENUM.PORTAL_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
+				break;
+			case BLOCK_ENUM.BLACK_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
+				break;
+			case BLOCK_ENUM.NO_SURFACE:
+				//This goes with the air
+				break;
+		}
+
+		var mesh;
+		switch(blockType)
+		{
+			case BLOCK_ENUM.AIR:
+				//this is the air block
+				//this will never get used but we want to catch this thing.
+				break;
+			case BLOCK_ENUM.CUBE:
+				//just create a big cube filling the space.
+				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(x1 - x2 + 1,y1 - y2 + 1,z1 - z2 + 1), surfaceMaterial, 0);
+				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2);
+				break;
+			case BLOCK_ENUM.HALF_SLOPE:
+				//I think it would be neat to create a slope with vertices at the corners
+				//in the orientation selected
+
+				break;
+			case BLOCK_ENUM.CORNER_SLOPE:
+				//Same as the halfslope.
+
+				break;
+			case BLOCK_ENUM.INVERSE_CORNER:
+				//Becuase of how Im thinking of doing this, it will basically make this
+				//shape no longer have a purpose.
+
+				break;
+		}
+
+		mesh.castShadow = mesh.receiveShadow = true;
+		this.scene.add(mesh);
+
 		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
 		{
 			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
 			{
 				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
 				{
-					this.createBlock(x, y, z, surfaceType, blockType, orientation);
+					this.data.levelTree.insertBlocks(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation, mesh);
 				}
 			}
 		}
