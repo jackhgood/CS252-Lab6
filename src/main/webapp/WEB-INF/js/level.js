@@ -300,7 +300,7 @@ Level.prototype = {
 		this.scene.add(ground);
 
 		this.createBlocks(-30, 1, -30, 30, 1, 30, BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
-
+		this.createBlocks(-5, 2, -5, 5, 2, 2, BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
 		// var item_material = Physijs.createMaterial(
 		// 	new THREE.MeshLambertMaterial({ color: 0x8888ff }),
 		// 	.8, .4
@@ -423,13 +423,54 @@ Level.prototype = {
 
 	createBlocks: function(x1, y1, z1, x2, y2, z2, surfaceType, blockType, orientation)
 	{
+		var surfaceMaterial;
+		switch(surfaceType)
+		{
+			case BLOCK_ENUM.PORTAL_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0xdddddd } ), .8, .4);
+				break;
+			case BLOCK_ENUM.BLACK_SURFACE:
+				surfaceMaterial = Physijs.createMaterial(
+					new THREE.MeshBasicMaterial( { color: 0x111111 } ), .8, .4);
+				break;
+			case BLOCK_ENUM.NO_SURFACE:
+				//This goes with the air
+				break;
+		}
+
+		var mesh;
+		switch(blockType)
+		{
+			case BLOCK_ENUM.AIR:
+				//this is the air block
+				//this will never get used but we want to catch this thing.
+				break;
+			case BLOCK_ENUM.CUBE:
+				mesh = new Physijs.BoxMesh(new THREE.CubeGeometry(x1 - x2 + 1,y1 - y2 + 1,z1 - z2 + 1), surfaceMaterial, 0);
+				mesh.position.set((x1 + x2 + 1) / 2, (y1 + y2 + 1) / 2, (z1 + z2 + 1) / 2)
+				break;
+			case BLOCK_ENUM.HALF_SLOPE:
+
+				break;
+			case BLOCK_ENUM.CORNER_SLOPE:
+
+				break;
+			case BLOCK_ENUM.INVERSE_CORNER:
+
+				break;
+		}
+
+		mesh.castShadow = mesh.receiveShadow = true;
+		this.scene.add(mesh);
+
 		for(var x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
 		{
 			for(var y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
 			{
 				for(var z = Math.min(z1, z2); z <= Math.max(z1, z2); z++)
 				{
-					this.createBlock(x, y, z, surfaceType, blockType, orientation);
+					this.data.levelTree.insertBlock(x, y, z, surfaceType, blockType, orientation, mesh);
 				}
 			}
 		}
