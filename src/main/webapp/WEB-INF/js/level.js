@@ -35,8 +35,7 @@ var Level = function(data, timestep, settings) {
 	this.playerPortalValues = [];
 	// used for checking if portals are valid
 	this.raycaster = new THREE.Raycaster();
-	this.raycaster.near = -0.1;
-	this.raycaster.far = 0.1;
+	this.raycaster.near = 0;
 
 	// block components
 	this.components = [];
@@ -196,21 +195,6 @@ Level.prototype = {
 
 		this.scene.add(this.light);
 
-		// TODO: these are placeholder testing objects that should be removed when the real world is implemented
-		var ground_material = Physijs.createMaterial(
-			new THREE.MeshLambertMaterial({ color: 0x888888 }),
-			.8, // friction
-			.4  // restitution
-		);
-		var ground = new Physijs.BoxMesh(
-			new THREE.CubeGeometry(1000, 1, 1000),
-			ground_material,
-			0 // mass
-		);
-		ground.receiveShadow = true;
-		ground.castShadow = false;
-		this.scene.add(ground);
-
 		this.createBlocks(new THREE.Vector3(0, 1.5, 0), new THREE.Vector3(60, 1, 60), BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
 		this.createBlocks(new THREE.Vector3(0, 2.5, 0), new THREE.Vector3(10, 1, 10), BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
 
@@ -248,8 +232,17 @@ Level.prototype = {
 		return JSON.stringify(data);
 	},
 
+	/**
+	 * Insert an object into the scene.
+	 * @param position the position of the center of the object
+	 * @param scale the size of the object
+	 * @param surfaceType the surface material of the object
+	 * @param blockType the shape of the object
+	 * @param orientation the orientation of the object
+	 */
 	createBlocks: function(position, scale, surfaceType, blockType, orientation) {
-		var geo = this.components[blockType].clone().scale(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
+		var rescale = scale.clone().applyEuler(this.components[orientation]);
+		var geo = this.components[blockType].clone().scale(Math.abs(rescale.x), Math.abs(rescale.y), Math.abs(rescale.z));
 		geo.computeFaceNormals();
 		var mesh = new Physijs.ConvexMesh(geo, this.components[surfaceType], 0);
 		mesh.rotation.copy(this.components[orientation]);
@@ -264,8 +257,48 @@ Level.prototype = {
         mesh.surfaceType = surfaceType;
 		mesh.blockType = blockType;
 		mesh.orientation = orientation;
-		mesh.blockScale = scale.clone();
+		mesh.blockScale = rescale;
 		this.scene.add(mesh);
+	},
+
+	/**
+	 * Fires the raycaster and deletes what it hits.
+	 * @param x the x direction
+	 * @param y the y direction
+	 * @param z the z direction
+	 */
+	castAndRemove: function(x, y, z) {
+		this.raycaster.ray.direction.set(-x, -y, -z);
+		var oldpos = this.raycaster.ray.origin.clone();
+		this.raycaster.ray.origin.add(new THREE.Vector3(x, y, z))
+		var intersects = this.raycaster.intersectObjects(this.data.blockList);
+		for(var i = 0; i < intersects.length; i++) {
+			if(intersects[i].object.surfaceType) { // make sure it's actually an object and not a player or camera or something
+				this.scene.remove(intersects[i].object);
+				var j = this.data.blockList.indexOf(intersects[0].object);
+				if(j > -1) this.data.blockList.splice(j, 1);
+				if(intersects[i].object.surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
+					j = this.data.portalBlocks.indexOf(intersects[0].object);
+					if(j > -1) this.data.portalBlocks.splice(j, 1);
+				}
+			}
+		}
+		this.raycaster.ray.origin = oldpos;
+	},
+
+	/**
+	 * Removes objects from the scene.
+	 * @param position the position to remove from
+	 */
+	deleteBlocks: function(position) {
+		this.raycaster.far = 0.5;
+		this.raycaster.ray.origin = position.clone();
+		this.castAndRemove(1, 0, 0);
+		this.castAndRemove(-1, 0, 0);
+		this.castAndRemove(0, 1, 0);
+		this.castAndRemove(0, -1, 0);
+		this.castAndRemove(0, 0, 1);
+		this.castAndRemove(0, 0, -1);
 	},
 
 	update: function(keystatus, mousestatus) {
@@ -407,7 +440,7 @@ Level.prototype = {
 	 * @param button the mouse button (usually 1 for left or 2 for right)
 	 */
 	click: function(button) {
-		if(!this.mode) {
+		if(!this.player.mode) {
 			if(button == 1) button = 0; // LMB
 			else if(button == 3) button = 1; // RMB
 			else return;
@@ -427,6 +460,7 @@ Level.prototype = {
 					rotation.y += Math.PI; // I don't know why, but shape geometries need this
 					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
 					// check around the location to make sure there's enough room
+					this.raycaster.far = 0.1;
 					this.raycaster.ray.direction = norm.negate();
 					var points = 8; // the number of points to check
 					var pass = true;
