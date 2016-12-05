@@ -6,10 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Basic controller for the main menu page.
@@ -30,6 +33,17 @@ public class MainController {
 	public String play(HttpServletRequest request, Model model) {
 		return "game";
 	}
+
+	/**
+	 * Save the level.
+	 */
+	@RequestMapping(value = "/save", method = RequestMethod.POST)
+	@ResponseBody
+	public String save(HttpServletRequest request, HttpServletResponse response, @RequestParam String data, Model model) {
+		model.addAttribute("message", data);
+		return data;
+	}
+
 
 	/**
 	 * Go to the home page.

@@ -4,6 +4,8 @@
 <html>
 <head>
 	<meta charset="utf-8">
+	<meta name="_csrf" th:content="${_csrf.token}"/>
+	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<title>Gateway</title>
 
 	<link rel="stylesheet" href="<c:url value='/css/main.css' />" />
@@ -25,7 +27,7 @@
 		Physijs.scripts.ammo = "<c:url value='/js/physijs/ammo.js' />";
 
 		// functions
-		var init, gameUpdate, debugUpdate, render, startLevel, updateUi;
+		var init, gameUpdate, debugUpdate, render, startLevel, saveLevel, updateUi;
 
 		// visual elements
 		var viewport, renderer, render_stats, physics_stats, level, pointerlockElement;
@@ -173,6 +175,9 @@
 									break;
 								case 86: // V
 									if(settings.debug) level.player.toggleThirdPerson();
+									break;
+								case 80: // P
+									saveLevel();
 									break;
 							}
 						}
@@ -400,6 +405,17 @@
 					else document.getElementById("block" + i).style.color = "gray";
 				}
 			}
+		};
+
+		/**
+		 * Attempts to save the level to the database.
+		 */
+		saveLevel = function() {
+			var request = new XMLHttpRequest();
+			request.open("POST", "<c:url value="/save" />", false);
+			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			request.send("data=" + encodeURIComponent(level.compile()));
+			alert(request.responseText);
 		};
 
 		/**

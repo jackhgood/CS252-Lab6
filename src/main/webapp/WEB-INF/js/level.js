@@ -226,8 +226,29 @@ Level.prototype = {
 		return this.scene;
 	},
 
-	createBlocks: function(position, scale, surfaceType, blockType, orientation)
-	{
+	/**
+	 * Compiles the level data into a string for saving and returns it.
+	 */
+	compile: function() {
+		var data = {};
+		data.playerPosition = this.player.camera.position;
+		data.playerRotation = this.player.camera.rotation;
+		data.blockList = [];
+		for(var i = 0; i < this.data.blockList.length; i++) {
+			var block = this.data.blockList[i];
+			// these are short to save space
+			data.blockList.push({
+				p: block.position, 		// position
+				s: block.blockScale,	// scale
+				m: block.surfaceType,	// surface (material)
+				b: block.blockType,		// block type
+				o: block.orientation	// orientation
+			});
+		}
+		return JSON.stringify(data);
+	},
+
+	createBlocks: function(position, scale, surfaceType, blockType, orientation) {
 		var geo = this.components[blockType].clone().scale(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
 		geo.computeFaceNormals();
 		var mesh = new Physijs.ConvexMesh(geo, this.components[surfaceType], 0);
