@@ -11,4 +11,6 @@ public class DAOFactory {
 		return new LevelDAOMongo(sc);
 	}
 
+	public static UserDAO getUserDAO(ServletContext sc) { return new UserDAOMongo(sc); }
+
 }

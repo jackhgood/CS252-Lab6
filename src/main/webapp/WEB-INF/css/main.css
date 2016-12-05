@@ -1,16 +1,37 @@
 ul.ll {
-    border-style: solid;
-    border-width: medium;
+    /*border-style: solid;
+    border-width: medium; */
     list-style-type: none;
     padding: 0px;
 
 }
 
+li.space {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
 li.litem {
     border-style: solid;
+    border-top: none;
     border-width: 2px;
     padding: 0;
     margin: 0;
+}
+
+li.litembreak {
+    /*border-style: solid;
+    border-width: 1px; */
+    display:block;
+    border-bottom: solid;
+    border-width: 2px;
+    margin: 0;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-weight: bold;
+    text-align: center;
 }
 
 li.litem input {

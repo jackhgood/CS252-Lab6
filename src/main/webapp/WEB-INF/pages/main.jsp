@@ -33,13 +33,28 @@
     <H3 style="text-align: center">Choose a Level to Play!</H3>
 </sec:authorize>
 
+<sec:authorize access="hasAuthority('ROLE_USER')">
 <ul class="ll">
+    <li class="litembreak">${un}</li>
     <c:forEach items="${levellist}" var="level">
         <form action="/play" method="get">
-            <li class="litem"><input type="submit" name="level" value="${level}" /></li>
+            <li class="litem"><input type="submit" name="level" value="${level}" /></li
+            <input type="hidden" name="usr" value="${un}" />
         </form>
     </c:forEach>
+
+    <c:forEach items="${multilist}" var="multi">
+        <li class="space" li> </li>
+        <li class="litembreak">${multi[0]}</li>
+        <c:forEach items="${multi}" var="lvl" begin="1">
+            <form action="/play" method="get">
+                <li class="litem"><input type="submit" name="level" value="${lvl}" /></li>
+                <input type="hidden" name="usr" value="${multi[0]}" />
+            </form>
+        </c:forEach>
+    </c:forEach>
 </ul>
+</sec:authorize>
 
 </body>
 </html>
