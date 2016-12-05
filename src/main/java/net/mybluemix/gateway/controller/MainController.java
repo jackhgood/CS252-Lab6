@@ -1,5 +1,6 @@
 package net.mybluemix.gateway.controller;
 
+import net.mybluemix.gateway.authenticator.LoginAuthProvider;
 import net.mybluemix.gateway.dao.DAOFactory;
 import net.mybluemix.gateway.dao.LevelDAO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,9 @@ public class MainController {
 	 */
 	@RequestMapping("")
 	public String home(HttpServletRequest request, Model model) {
+		LoginAuthProvider lap = new LoginAuthProvider();
+		lap.setServletContext(servletContext);
+
 		LevelDAO dao = DAOFactory.getLevelDAO(servletContext);
 		model.addAttribute("message", dao.getLevel("test", ""));
 		//model.addAttribute("message", "Hello");

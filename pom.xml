@@ -10,7 +10,8 @@
 
 	<properties>
 		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
-		<spring.version>4.2.1.RELEASE</spring.version>
+		<spring.version>4.3.4.RELEASE</spring.version>
+		<spring-data.version>Hopper-SR5</spring-data.version>
 		<spring-security.version>4.2.0.RELEASE</spring-security.version>
 		<jackson.version>2.6.0</jackson.version>
 		<jdk.version>1.8</jdk.version>
@@ -18,6 +19,14 @@
 		<javaee.version>7.0</javaee.version>
         <tomcat.version>8.0.24</tomcat.version>
 	</properties>
+
+	<repositories>
+		<repository>
+			<id>spring-milestone</id>
+			<name>Spring Maven MILESTONE Repository</name>
+			<url>http://repo.spring.io/libs-milestone</url>
+		</repository>
+	</repositories>
 
 	<dependencies>
 		<!--
@@ -64,6 +73,12 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-mongodb</artifactId>
+			<version>1.9.5.RELEASE</version>
 		</dependency>
 
 		<dependency>

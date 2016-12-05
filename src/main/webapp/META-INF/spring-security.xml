@@ -5,25 +5,15 @@
 					http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
 
 	<b:bean id="openIdUserService" class="net.mybluemix.gateway.service.OpenIdUserDetailsService" />
+	<b:bean id="LoginAuthProvider" class="net.mybluemix.gateway.authenticator.LoginAuthProvider" />
 
-	<http auto-config="true">
+	<http auto-config="true" authentication-manager-ref="loginAuthManager">
 		<intercept-url pattern="/admin**" access="hasRole('ROLE_USER')" />
-		<!--<openid-login user-service-ref="openIdUserService" >
-			<attribute-exchange >
-				<openid-attribute name="email" type="http://schema.openid.net/contact/email" required="true" />
-				<openid-attribute name="firstName" type="http://axschema.org/namePerson/first" required="true" />
-				<openid-attribute name="lastName" type="http://axschema.org/namePerson/last" required="true" />
-			</attribute-exchange>
-		</openid-login> -->
 	</http>
 
-	<authentication-manager>
-		<!-- <authentication-provider user-service-ref="openIdUserService" /> -->
-		<authentication-provider>
-			<user-service>
-				<user name="user" password="password" authorities="ROLE_USER" />
-			</user-service>
-		</authentication-provider>
+	<authentication-manager alias="loginAuthManager">
+		<authentication-provider ref="LoginAuthProvider" />
 	</authentication-manager>
+
 
 </b:beans>
