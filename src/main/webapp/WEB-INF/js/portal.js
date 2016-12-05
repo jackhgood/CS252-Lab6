@@ -11,8 +11,8 @@
 var Portal = function(scene, player, position, rotation, color, settings) {
 
 	// general portal settings
-	this.radiusX = 0.5;
-	this.radiusY = 1;
+	this.radiusX = 0.45;
+	this.radiusY = 0.9;
 
 	this.scene = scene;
 	this.position = position;

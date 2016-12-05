@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Basic controller for the main menu page.
@@ -29,8 +30,20 @@ public class MainController {
      */
 	@RequestMapping("/play")
 	public String play(HttpServletRequest request, Model model) {
+		model.addAttribute("data", null);
 		return "game";
 	}
+
+	/**
+	 * Save the level.
+	 */
+	@RequestMapping(value = "/save", method = RequestMethod.POST)
+	@ResponseBody
+	public String save(HttpServletRequest request, HttpServletResponse response, @RequestParam String data, Model model) {
+		model.addAttribute("message", data);
+		return data;
+	}
+
 
 	/**
 	 * Go to the home page.

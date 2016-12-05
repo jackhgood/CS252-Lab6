@@ -198,7 +198,7 @@ Player.prototype = {
 		if((W != S) && (A != D)) speed /= 1.414214;
 
 
-		if(this.mode == 1) { // Edit mode
+		if(this.mode) { // Edit mode
 			if (W && !S) {
 				this.camera.translateZ(-speed*timestep);
 			}
@@ -239,6 +239,8 @@ Player.prototype = {
 						this.selection.scale,
 						this.selectedSurface, this.selectedBlock, this.selectedOrientation
 					);
+				} else if(mousestatus[3]) {
+					this.level.deleteBlocks(this.selection.position);
 				}
 				this.selection.scale.x = 1;
 				this.selection.scale.y = 1;
@@ -246,7 +248,6 @@ Player.prototype = {
 				this.selectionStart = selectPosition;
 				this.selection.position.copy(selectPosition);
 			}
-			// grid align it
 			this.selection.position.x = this.selection.position.x + 0.5;
 			this.selection.position.y = this.selection.position.y + 0.5;
 			this.selection.position.z = this.selection.position.z + 0.5;
