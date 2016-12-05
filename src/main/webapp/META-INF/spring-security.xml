@@ -8,8 +8,9 @@
 	<b:bean id="LoginAuthProvider" class="net.mybluemix.gateway.authenticator.LoginAuthProvider" />
 
 	<http auto-config="true" authentication-manager-ref="loginAuthManager" use-expressions="true">
-		<intercept-url pattern="/admin**" access="hasRole('ROLE_USER')" />
+		<!-- <intercept-url pattern="/admin**" access="hasRole('ROLE_USER')" /> -->
 		<intercept-url pattern="/play" access="hasRole('ROLE_USER')" />
+		<intercept-url pattern="/register" access="not hasRole('ROLE_USER')" />
 		<logout invalidate-session="true" logout-success-url="/main" />
 	</http>
 

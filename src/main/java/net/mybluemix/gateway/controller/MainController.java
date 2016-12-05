@@ -19,6 +19,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 
 /**
  * Basic controller for the main menu page.
@@ -38,7 +39,17 @@ public class MainController {
 	@PreAuthorize("hasRole('ROLE_USER')")
 	@RequestMapping("/play")
 	public String play(HttpServletRequest request, Model model) {
-		model.addAttribute("data", null);
+		if(request.getParameter("level") == null) {
+			System.out.println("Fresh level");
+			model.addAttribute("data", null);
+		}
+		else {
+			String username = SecurityContextHolder.getContext().getAuthentication().getName();
+			LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
+			String data = ldm.getLevel(username, request.getParameter("level"));
+			System.out.println("Loaded level: " + request.getParameter("level"));
+			model.addAttribute("data", data);
+		}
 
 		return "game";
 	}
@@ -69,6 +80,17 @@ public class MainController {
 	 */
 	@RequestMapping(value={"", "/main"})
 	public String home(HttpServletRequest request, Model model) {
+
+		ArrayList<String> levellist;
+		if(request.isUserInRole("ROLE_USER")) {
+			LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
+			levellist = ldm.getLevels(SecurityContextHolder.getContext().getAuthentication().getName());
+		}
+		else {
+			levellist = new ArrayList<>();
+		}
+		model.addAttribute("levellist", levellist);
+
 		return "main";
 	}
 

@@ -14,14 +14,32 @@
 </head>
 <body>
 
-<h2>Gateway</h2>
-<button onclick="window.location.href='<c:url value="/play" />'">Play!</button>
+<h1>Gateway</h1>
+<button onclick="window.location.href='<c:url value="/play" />'">Create a New Level!</button>
 <sec:authorize access="not hasAuthority('ROLE_USER')">
     <button onclick="window.location.href='<c:url value="/login" />'">Login</button>
+    <button onclick="window.location.href='<c:url value="/register" />'">Register</button>
 </sec:authorize>
 <sec:authorize access="hasAuthority('ROLE_USER')">
     <button onclick="window.location.href='<c:url value="/logout?${_csrf.parameterName}=${_csrf.token}" />'">Logout</button>
 </sec:authorize>
+
+<br>
+
+<sec:authorize access="not hasAuthority('ROLE_USER')">
+    <H3 style="text-align: center">Login to View Your Levels!</H3>
+</sec:authorize>
+<sec:authorize access="hasAuthority('ROLE_USER')">
+    <H3 style="text-align: center">Choose a Level to Play!</H3>
+</sec:authorize>
+
+<ul class="ll">
+    <c:forEach items="${levellist}" var="level">
+        <form action="/play" method="get">
+            <li class="litem"><input type="submit" name="level" value="${level}" /></li>
+        </form>
+    </c:forEach>
+</ul>
 
 </body>
 </html>
