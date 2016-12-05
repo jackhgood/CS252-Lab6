@@ -5,6 +5,7 @@ import net.mybluemix.gateway.authenticator.LoginAuthProvider;
 import net.mybluemix.gateway.authenticator.RegistrationForm;
 import net.mybluemix.gateway.dao.DAOFactory;
 import net.mybluemix.gateway.dao.LevelDAO;
+import net.mybluemix.gateway.dao.LevelDAOMongo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -47,9 +48,18 @@ public class MainController {
 	 */
 	@RequestMapping(value = "/save", method = RequestMethod.POST)
 	@ResponseBody
-	public String save(HttpServletRequest request, HttpServletResponse response, @RequestParam String data, Model model) {
+	public String save(HttpServletRequest request, HttpServletResponse response, @RequestParam String data, @RequestParam String name, Model model) {
+		LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		Boolean succ = ldm.saveLevel(username, name, data);
+
 		model.addAttribute("message", data);
-		return data;
+		if(succ) {
+			return "Save succcessful";
+		}
+		else {
+			return "There was an error while saving";
+		}
 	}
 
 
@@ -59,9 +69,6 @@ public class MainController {
 	 */
 	@RequestMapping(value={"", "/main"})
 	public String home(HttpServletRequest request, Model model) {
-		LevelDAO dao = DAOFactory.getLevelDAO(servletContext);
-		model.addAttribute("message", dao.getLevel("test", ""));
-		//model.addAttribute("message", "Hello");
 		return "main";
 	}
 
@@ -73,7 +80,6 @@ public class MainController {
 		String u = registrationform.getUsername();
 
 		if(!pw1.equals(pw2)) {
-			//TODO: add error page call
 			return "pwsdontmatch";
 		}
 
@@ -93,7 +99,6 @@ public class MainController {
 		}
 
 		if(res.size() > 0) {
-			//TODO: add error page call
 			return "alreadyexists";
 		}
 

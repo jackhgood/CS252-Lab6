@@ -1,5 +1,5 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<%@ page language="java" pageEncoding="UTF-8" session="false"%>
+<%@ page language="java" pageEncoding="UTF-8" session="true" isELIgnored="false"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -408,14 +408,33 @@
 			}
 		};
 
+
+		// Code snippet that makes sure that XMLHttpRequests always use csrf
+		(function() {
+			var openproto = XMLHttpRequest.prototype.open;
+			XMLHttpRequest.prototype.open = function() {
+				var response = openproto.apply(this, arguments);
+				this.setRequestHeader("${_csrf.headerName}", "${_csrf.token}");
+				return response;
+			};
+		})();
+
 		/**
 		 * Attempts to save the level to the database.
 		 */
 		saveLevel = function() {
+			var name = window.prompt("Enter a name for the level", "");
+			while( name == null || name == "" ) {
+				if(name == null) {
+					return;
+				}
+				name = window.prompt("Enter a name for the level", "Name cannot be blank");
+			}
 			var request = new XMLHttpRequest();
-			request.open("POST", "<c:url value="/save" />", false);
+			//alert("hi");
+			request.open("POST", "<c:url value='/save' />", false);
 			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-			request.send("data=" + encodeURIComponent(level.compile()));
+			request.send("data=" + encodeURIComponent(level.compile()) + "&name=" + name);
 			alert(request.responseText);
 		};
 
