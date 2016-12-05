@@ -232,6 +232,9 @@ Player.prototype = {
 				this.selection.scale.x = selectPosition.x - this.selectionStart.x;
 				this.selection.scale.y = selectPosition.y - this.selectionStart.y;
 				this.selection.scale.z = selectPosition.z - this.selectionStart.z;
+				this.selection.scale.x -= this.selection.scale.x * (this.selectionSize - 1);
+				this.selection.scale.y -= this.selection.scale.y * (this.selectionSize - 1);
+				this.selection.scale.z -= this.selection.scale.z * (this.selectionSize - 1);
 				this.selection.scale.x += this.selection.scale.x == 0 ? 1 : Math.sign(this.selection.scale.x);
 				this.selection.scale.y += this.selection.scale.y == 0 ? 1 : Math.sign(this.selection.scale.y);
 				this.selection.scale.z += this.selection.scale.z == 0 ? 1 : Math.sign(this.selection.scale.z);
