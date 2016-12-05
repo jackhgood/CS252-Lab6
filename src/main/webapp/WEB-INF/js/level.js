@@ -204,13 +204,6 @@ Level.prototype = {
 			this.createBlocks(new THREE.Vector3(b.p.x, b.p.y, b.p.z), new THREE.Vector3(b.s.x, b.s.y, b.s.z), b.m, b.b, b.o);
 		}
 
-		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.settings);
-		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.settings);
-		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 1.5, 0), new THREE.Euler(0, Math.PI / 2, 0, "YXZ"), 0x0000ff, this.settings);
-		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(0, 10*1.5, 2), new THREE.Euler(Math.PI / 2, 0, 0, "YXZ"), 0xffff00, this.settings);
-		this.portals[0].link(this.portals[1]);
-		this.portals[1].link(this.portals[0]);
-
 		this.updateSettings();
 
 		return this.scene;
@@ -464,7 +457,7 @@ Level.prototype = {
 					var rotation = dummyObject.rotation;
 					rotation.reorder("YXZ");
 					rotation.y += Math.PI; // I don't know why, but shape geometries need this
-					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, this.portals[button].color, this.settings);
+					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, button ? 0x009900 : 0x990099, this.settings);
 					// check around the location to make sure there's enough room
 					this.raycaster.far = 0.1;
 					this.raycaster.ray.direction = norm.negate();
@@ -482,9 +475,11 @@ Level.prototype = {
 					}
 
 					if (pass) {
-						var other = this.portals[button].other;
-						portal.link(other);
-						other.link(portal);
+						var other = this.portals[1 - button];
+						if(typeof other != "undefined") {
+							portal.link(other);
+							other.link(portal);
+						}
 						this.portals[button] = portal;
 					}
 				}
