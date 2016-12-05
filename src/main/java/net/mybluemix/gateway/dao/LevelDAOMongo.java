@@ -45,9 +45,9 @@ public class LevelDAOMongo implements LevelDAO {
 		if(res.hasNext()) {
 			DBObject dbo = res.next();
 			String p = (String)dbo.get("username");
-			//System.out.println(p);
+			System.out.println("Username on DAO end: " + p);
 			if(p.equals(username)) {
-				return (String)dbo.get("data");
+				return (String)dbo.get("leveldata");
 			}
 		}
 		return null;
@@ -77,6 +77,8 @@ public class LevelDAOMongo implements LevelDAO {
 				//Overwrites old level
 				BasicDBObject bdbo = new BasicDBObject();
 				bdbo.put("leveldata", leveldata);
+				bdbo.put("username", username);
+				bdbo.put("levelname", levelname);
 				collection.findAndModify(dbo, bdbo);
 				return true;
 			}
