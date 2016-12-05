@@ -38,7 +38,7 @@
     <li class="litembreak">${un}</li>
     <c:forEach items="${levellist}" var="level">
         <form action="/play" method="get">
-            <li class="litem"><input type="submit" name="level" value="${level}" /></li
+            <li class="litem"><input type="submit" name="level" value="${level}" /></li>
             <input type="hidden" name="usr" value="${un}" />
         </form>
     </c:forEach>

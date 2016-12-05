@@ -48,7 +48,7 @@ public class MainController {
 			String username = SecurityContextHolder.getContext().getAuthentication().getName();
 			LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
 			String data = ldm.getLevel(request.getParameter("usr"), request.getParameter("level"));
-			System.out.println("Loaded level: " + request.getParameter("level") + " by " + username);
+			System.out.println("Loaded level: " + request.getParameter("level") + " by " + request.getParameter("usr"));
 			model.addAttribute("data", data);
 		}
 
