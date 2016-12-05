@@ -4,8 +4,6 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<meta name="_csrf" th:content="${_csrf.token}"/>
-	<meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 	<title>Gateway</title>
 
 	<link rel="stylesheet" href="<c:url value='/css/main.css' />" />
@@ -330,6 +328,9 @@
 		 * Used to trigger player's change of position as result of controls input.
 		 */
 		gameUpdate = function() {
+			if(level.player.camera.position.y < -500) {
+				startLevel();
+			}
 			level.update(keystatus, mousestatus);
 		};
 

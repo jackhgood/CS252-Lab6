@@ -2,19 +2,23 @@
  * Constructor for portals.
  * @param scene the scene the portal belongs to
  * @param player the player who owns the portal
+ * @param object the object the portal is placed on
  * @param position vector of the location of the center of the portal
  * @param rotation the THREE.Euler rotation
  * @param color the color of the portal
  * @param settings the gameplay settings
  * @constructor
  */
-var Portal = function(scene, player, position, rotation, color, settings) {
+var Portal = function(scene, player, object, position, rotation, color, settings) {
 
 	// general portal settings
 	this.radiusX = 0.45;
 	this.radiusY = 0.9;
+	this.frameThickness = 0.05;
 
 	this.scene = scene;
+	// TODO: make the portal take more than one object
+	this.object = object;
 	this.position = position;
 	if(rotation.order !== "YXZ") rotation.reorder("YXZ");
 	rotation.y += Math.PI;
@@ -22,7 +26,6 @@ var Portal = function(scene, player, position, rotation, color, settings) {
 	this.antirotation = new THREE.Euler(-rotation.x, -rotation.y, -rotation.z, "ZXY");
 	this.color = color;
 	this.offset = 2 * player.camera.near;
-	this.settings = settings;
 	this.other = null;
 
 	this.forward = new THREE.Vector3(0, 0, 1).applyEuler(rotation);
@@ -51,11 +54,43 @@ var Portal = function(scene, player, position, rotation, color, settings) {
 	this.sceneInner = new THREE.Scene();
 	this.sceneInner.add(this.inner);
 
+	// add a frame with collision
+	var frameMaterial = Physijs.createMaterial(new THREE.MeshBasicMaterial(), 0.8, 0.4);
+	this.frame1 = new Physijs.BoxMesh(new THREE.BoxGeometry(this.frameThickness, 2 * this.radiusY, this.frameThickness), frameMaterial, 0);
+	this.frame1.position.copy(this.left).multiplyScalar(1.2*this.radiusX).add(this.position);
+	this.frame1.rotation.copy(this.rotation);
+	this.frame1._physijs.collision_type = COL.WALL;
+	this.frame1._physijs.collision_masks = COL.ALL;
+	this.frame1.visible = false;
+	this.scene.add(this.frame1);
+	this.frame2 = new Physijs.BoxMesh(new THREE.BoxGeometry(this.frameThickness, 2 * this.radiusY, this.frameThickness), frameMaterial, 0);
+	this.frame2.position.copy(this.left).multiplyScalar(-1.2*this.radiusX).add(this.position);
+	this.frame2.rotation.copy(this.rotation);
+	this.frame2._physijs.collision_type = COL.WALL;
+	this.frame2._physijs.collision_masks = COL.ALL;
+	this.frame2.visible = false;
+	this.scene.add(this.frame2);
+	this.frame3 = new Physijs.BoxMesh(new THREE.BoxGeometry(2 * this.radiusX, this.frameThickness, this.frameThickness), frameMaterial, 0);
+	this.frame3.position.copy(this.up).multiplyScalar(1.2*this.radiusY).add(this.position);
+	this.frame3.rotation.copy(this.rotation);
+	this.frame3._physijs.collision_type = COL.WALL;
+	this.frame3._physijs.collision_masks = COL.ALL;
+	this.frame3.visible = false;
+	this.scene.add(this.frame3);
+	this.frame4 = new Physijs.BoxMesh(new THREE.BoxGeometry(2 * this.radiusX, this.frameThickness, this.frameThickness), frameMaterial, 0);
+	this.frame4.position.copy(this.up).multiplyScalar(-1.2*this.radiusY).add(this.position);
+	this.frame4.rotation.copy(this.rotation);
+	this.frame4._physijs.collision_type = COL.WALL;
+	this.frame4._physijs.collision_masks = COL.ALL;
+	this.frame4.visible = false;
+	this.scene.add(this.frame4);
+
 	// put some offset so we don't clip the portal texture
 	this.position.add(this.forward.clone().multiplyScalar(this.offset));
 
+
 	// mark which side is the top
-	if(this.settings.debug) {
+	if(settings.debug) {
 		var debugGeometry = new THREE.CircleGeometry(this.radiusX / 10, 16);
 		var debugMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff - color, polygonOffset: true, polygonOffsetFactor: -10, polygonOffsetUnits: -3 });
 		debugGeometry.translate(0, 1.1 * this.radiusY, 0);
@@ -174,6 +209,16 @@ Portal.prototype = {
 		}
 
 		return object;
+	},
+
+	/**
+	 * Removes the portal's components from the scene.
+	 */
+	cleanup: function() {
+		this.scene.remove(this.frame1);
+		this.scene.remove(this.frame2);
+		this.scene.remove(this.frame3);
+		this.scene.remove(this.frame4);
 	}
 
 };

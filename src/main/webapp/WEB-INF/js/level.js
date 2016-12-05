@@ -3,8 +3,7 @@ const ORIENTMASK = 15;
 const BLOCKMASK = 15 << 4;
 const SURFACEMASK = 15 << 8;
 
-var BLOCK_ENUM =
-{
+var BLOCK_ENUM = {
 	AIR: 0 << 4,
 	CUBE: 1 << 4,
 	HALF_SLOPE: 2 << 4,
@@ -14,6 +13,24 @@ var BLOCK_ENUM =
 	NO_SURFACE: 0 << 8,
 	PORTAL_SURFACE: 1 << 8,
 	BLACK_SURFACE: 2 << 8
+};
+
+var COL = {
+	NOTHING: 0,
+	WALL: 1 << 0,
+	PLAYER: 1 << 1,
+	ENTITY: [
+		1 << 2,
+		1 << 3,
+		1 << 4,
+		1 << 5,
+		1 << 6,
+		1 << 7,
+		1 << 8,
+		1 << 9
+	],
+	ENTITIES: 1022,
+	ALL: 1023
 };
 
 
@@ -132,7 +149,7 @@ Level.prototype = {
 			playerPosition: new THREE.Vector3(0, 10, 0),
 			playerRotation: new THREE.Euler(0, 0, 0, "YXZ"),
             blockList: [
-				{ p: { x: 0, y: 0.5, z: 0 }, s: { x: 10, y: 1, z: 10 }, m: BLOCK_ENUM.BLACK_SURFACE, b: BLOCK_ENUM.CUBE, o: 0 }
+				{ p: { x: 0, y: 0.5, z: 0 }, s: { x: 30, y: 1, z: 30 }, m: BLOCK_ENUM.BLACK_SURFACE, b: BLOCK_ENUM.CUBE, o: 0 }
 			]
 		};
 	},
@@ -146,7 +163,7 @@ Level.prototype = {
 	constructScene: function(data) {
 		// set update time interval
 		this.scene = new Physijs.Scene({ fixedTimeStep: timestep });
-		this.scene.setGravity(new THREE.Vector3(0, -30, 0));
+		this.scene.setGravity(new THREE.Vector3(0, -24, 0));
 
 		// player
 		this.player = new Player(this, this.timestep, this.settings);
@@ -252,12 +269,29 @@ Level.prototype = {
         if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
             this.portalBlocks.push(mesh);
         }
+        mesh._physijs.collision_type = COL.WALL;
+		mesh._physijs.collision_masks = COL.ENTITIES;
         // our block data
         mesh.surfaceType = surfaceType;
 		mesh.blockType = blockType;
 		mesh.orientation = orientation;
 		mesh.blockScale = rescale;
 		this.scene.add(mesh);
+	},
+
+	/**
+	 * Removes objects from the scene.
+	 * @param position the position to remove from
+	 */
+	deleteBlocks: function(position) {
+		this.raycaster.far = 0.5;
+		this.raycaster.ray.origin = position.clone();
+		this.castAndRemove(1, 0, 0);
+		this.castAndRemove(-1, 0, 0);
+		this.castAndRemove(0, 1, 0);
+		this.castAndRemove(0, -1, 0);
+		this.castAndRemove(0, 0, 1);
+		this.castAndRemove(0, 0, -1);
 	},
 
 	/**
@@ -286,23 +320,41 @@ Level.prototype = {
 	},
 
 	/**
-	 * Removes objects from the scene.
-	 * @param position the position to remove from
+	 * Update an object's collision mask and re-add it if necessary.
+	 * @param object the object to update
+	 * @param mask the target collision group
+	 * @param collide whether the object should collide with the provided group
 	 */
-	deleteBlocks: function(position) {
-		this.raycaster.far = 0.5;
-		this.raycaster.ray.origin = position.clone();
-		this.castAndRemove(1, 0, 0);
-		this.castAndRemove(-1, 0, 0);
-		this.castAndRemove(0, 1, 0);
-		this.castAndRemove(0, -1, 0);
-		this.castAndRemove(0, 0, 1);
-		this.castAndRemove(0, 0, -1);
+	setCollision: function(object, mask, collide) {
+		if(typeof object._physijs.collision_masks === "undefined") {
+			object._physijs.collision_masks = (collide ? mask : 0);
+		} else {
+			if(collide) {
+				if((object._physijs.collision_masks & mask) != mask) {
+					object._physijs.collision_masks |= mask;
+					this.scene.remove(object);
+					this.scene.add(object);
+				}
+			} else {
+				if((object._physijs.collision_masks & mask) != 0) {
+					object._physijs.collision_masks &= !mask;
+					this.scene.remove(object);
+					this.scene.add(object);
+				}
+			}
+		}
 	},
 
+	/**
+	 * Update the scene and perform game logic.
+	 * @param keystatus the keyboard states
+	 * @param mousestatus the mouse button states
+	 */
 	update: function(keystatus, mousestatus) {
 		this.player.update(keystatus, mousestatus);
 		this.player.prepCamera();
+		var trueObjects = [];
+		var falseObjects = [];
 		for(var i = 0; i < this.portals.length; i++) {
 			// the dot product of the portal's normal with the vector to the player's position
 			var playerToPortal = this.player.camera.position.clone().sub(this.portals[i].position);
@@ -321,7 +373,22 @@ Level.prototype = {
 					break;
 				}
 			}
+			if(playerToPortal.length() < 2) {
+				if(Math.abs(playerToPortal.clone().projectOnVector(this.portals[i].up).length()) < this.portals[i].radiusY
+						&& Math.abs(playerToPortal.clone().projectOnVector(this.portals[i].left).length()) < this.portals[i].radiusX) {
+					falseObjects.push(this.portals[i].object);
+					this.setCollision(this.portals[i].object, COL.PLAYER, false);
+				} else {
+					trueObjects.push(this.portals[i].object);
+				}
+			} else {
+				trueObjects.push(this.portals[i].object);
+			}
 			this.playerPortalValues[i] = product;
+		}
+		for(i = 0; i < trueObjects.length; i++) {
+			if(falseObjects.indexOf(falseObjects[i]) < 0)
+				this.setCollision(trueObjects[i], COL.PLAYER, true);
 		}
 	},
 
@@ -456,31 +523,37 @@ Level.prototype = {
 					dummyObject.lookAt(norm);
 					var rotation = dummyObject.rotation;
 					rotation.reorder("YXZ");
-					rotation.y += Math.PI; // I don't know why, but shape geometries need this
-					var portal = new Portal(this.scene, this.player, intersects[0].point, rotation, button ? 0x009900 : 0x990099, this.settings);
+					rotation.y += Math.PI; // I don't know why, but this is necessary
+					var portal = new Portal(this.scene, this.player, intersects[0].object, intersects[0].point, rotation, button ? 0x009900 : 0x990099, this.settings);
 					// check around the location to make sure there's enough room
 					this.raycaster.far = 0.1;
 					this.raycaster.ray.direction = norm.negate();
 					var points = 8; // the number of points to check
 					var pass = true;
-					for (var i = 0; i < points; i++) {
+					for(var i = 0; i < points; i++) {
 						var theta = i / points * 2 * Math.PI;
 						this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
 							.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
 							.add(intersects[0].point);
-						if (this.raycaster.intersectObjects(this.portalBlocks).length == 0) {
+						if(this.raycaster.intersectObjects(this.portalBlocks).length == 0) {
 							pass = false;
 							break;
 						}
 					}
 
-					if (pass) {
+					if(pass) {
 						var other = this.portals[1 - button];
 						if(typeof other != "undefined") {
 							portal.link(other);
 							other.link(portal);
 						}
+						if(typeof this.portals[button] != "undefined") {
+							this.setCollision(this.portals[button].object, COL.ENTITIES, true);
+							this.portals[button].cleanup();
+						}
 						this.portals[button] = portal;
+					} else {
+						portal.cleanup();
 					}
 				}
 

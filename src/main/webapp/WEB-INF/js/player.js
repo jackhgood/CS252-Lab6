@@ -12,9 +12,10 @@ var Player = function(level, timestep, settings) {
 	this.speed = 5;
 	this.acceleration = 10;
 	this.airAcceleration = 2;
-	this.jumpVelocity = 12;
+	this.jumpVelocity = 10;
+	this.maxSpeed = 42;
 	this.mouseSensitivity = 0.004;
-	this.height = 1.6;
+	this.height = 1.4;
 	this.width = 0.5;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
@@ -58,7 +59,7 @@ var Player = function(level, timestep, settings) {
 	// the main section is low-friction to avoid clinging to walls
 	var bodyMaterial = Physijs.createMaterial(
 		new THREE.MeshBasicMaterial({ color: 0x66ff66, wireframe: true }),
-		0.1, // low friction
+		0.2, // low friction
 		0    // no restitution
 	);
 	this.body = new Physijs.CylinderMesh(
@@ -66,6 +67,8 @@ var Player = function(level, timestep, settings) {
 		bodyMaterial,
 		0.5 * this.mass
 	);
+	this.body._physijs.collision_type = COL.PLAYER;
+	this.body._physijs.collision_masks = COL.ALL;
 	this.body.visible = false;
 	this.level.scene.add(this.body);
 	// lock all rotation, producing a rigid player
@@ -79,14 +82,16 @@ var Player = function(level, timestep, settings) {
 		0 // no restitution
 	);
 	this.foot = new Physijs.ConeMesh(
-		new THREE.ConeGeometry(0.4 * this.width, 0.2 * this.height, 12),
+		new THREE.ConeGeometry(0.4 * this.width, 0.25 * this.height, 12),
 		footMaterial,
 		0.5 * this.mass
 	);
+	this.foot._physijs.collision_type = COL.PLAYER;
+	this.foot._physijs.collision_masks = COL.ALL;
 	this.foot.visible = false;
 	this.foot.rotateX(Math.PI);
 
-	this.foot.position.set(this.body.position.x, this.body.position.y - 0.525 * this.height, this.body.position.z);
+	this.foot.position.set(this.body.position.x, this.body.position.y - 0.5 * this.height, this.body.position.z);
 	this.foot.addEventListener(
 		"collision",
 		function(other_object, relative_velocity, relative_rotation, contact_normal) {
@@ -320,6 +325,7 @@ Player.prototype = {
 				if (this.onGround) v.y = 1.414214 * this.jumpVelocity;
 			}
 
+			if(v.length() >= this.maxSpeed) v.normalize().multiplyScalar(this.maxSpeed);
 			this.body.setLinearVelocity(v);
 		}
 
