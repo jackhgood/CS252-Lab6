@@ -16,7 +16,7 @@ var Player = function(level, timestep, settings) {
 	this.maxSpeed = 42;
 	this.mouseSensitivity = 0.004;
 	this.height = 1.4;
-	this.width = 0.5;
+	this.width = 0.35;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
 	this.mode = 0; // 0 = player, 1 = edit
@@ -232,6 +232,9 @@ Player.prototype = {
 				this.selection.scale.x = selectPosition.x - this.selectionStart.x;
 				this.selection.scale.y = selectPosition.y - this.selectionStart.y;
 				this.selection.scale.z = selectPosition.z - this.selectionStart.z;
+				this.selection.scale.x -= this.selection.scale.x * (this.selectionSize - 1);
+				this.selection.scale.y -= this.selection.scale.y * (this.selectionSize - 1);
+				this.selection.scale.z -= this.selection.scale.z * (this.selectionSize - 1);
 				this.selection.scale.x += this.selection.scale.x == 0 ? 1 : Math.sign(this.selection.scale.x);
 				this.selection.scale.y += this.selection.scale.y == 0 ? 1 : Math.sign(this.selection.scale.y);
 				this.selection.scale.z += this.selection.scale.z == 0 ? 1 : Math.sign(this.selection.scale.z);

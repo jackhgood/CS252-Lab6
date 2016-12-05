@@ -58,7 +58,7 @@ body {
 	left: 8px;
 }
 
-#graphicsMenu button {
+#pauseMenu button, #editMenu button {
 	background: transparent;
 	border: 1px solid white;
 	border-radius: 4px;
