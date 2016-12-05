@@ -174,9 +174,6 @@
 								case 86: // V
 									if(settings.debug) level.player.toggleThirdPerson();
 									break;
-								case 80: // P
-									saveLevel();
-									break;
 							}
 						}
 					}
@@ -431,7 +428,6 @@
 				name = window.prompt("Enter a name for the level", "Name cannot be blank");
 			}
 			var request = new XMLHttpRequest();
-			//alert("hi");
 			request.open("POST", "<c:url value='/save' />", false);
 			request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 			request.send("data=" + encodeURIComponent(level.compile()) + "&name=" + name);
@@ -507,6 +503,7 @@
 					</td>
 				</tr>
 			</table>
+			<button onclick="if(window.confirm('Really quit?')) window.location.href='<c:url value="/" />'">Exit to Main Menu</button>
 			<div id="graphicsMenuDropdown">&#9654 Graphics Settings</div>
 			<div id="graphicsMenu">
 				Shadow Quality <br />
@@ -521,7 +518,6 @@
 				<input id="portalRecursionsSlider" type="range" min="1" max="16" step="1"
 					   onchange="document.getElementById('portalRecursionsValue').innerHTML = this.value;" /> <br />
 				<button id="graphicsApplyButton">Apply</button>
-
 			</div>
 		</div>
 		<div id="editMenu">
@@ -545,6 +541,7 @@
 					<td id="block3" onclick="level.player.selectedBlock = BLOCK_ENUM.INVERSE_CORNER; updateUi(1, 3);">Anti-tetra</td>
 				</tr>
 			</table>
+			<button onclick="saveLevel()">Save Level</button>
 		</div>
 	</div>
 </div>

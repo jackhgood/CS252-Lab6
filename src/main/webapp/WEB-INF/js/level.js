@@ -373,7 +373,7 @@ Level.prototype = {
 					break;
 				}
 			}
-			if(playerToPortal.length() < 2) {
+			if(playerToPortal.length() < 3) {
 				if(Math.abs(playerToPortal.clone().projectOnVector(this.portals[i].up).length()) < this.portals[i].radiusY
 						&& Math.abs(playerToPortal.clone().projectOnVector(this.portals[i].left).length()) < this.portals[i].radiusX) {
 					falseObjects.push(this.portals[i].object);

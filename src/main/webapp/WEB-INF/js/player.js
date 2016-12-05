@@ -16,7 +16,7 @@ var Player = function(level, timestep, settings) {
 	this.maxSpeed = 42;
 	this.mouseSensitivity = 0.004;
 	this.height = 1.4;
-	this.width = 0.5;
+	this.width = 0.35;
 	this.mass = 5; // TODO: determine mass units
 	this.friction = 2.2;
 	this.mode = 0; // 0 = player, 1 = edit
