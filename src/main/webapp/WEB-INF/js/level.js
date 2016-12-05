@@ -26,8 +26,7 @@ var BLOCK_ENUM =
  * @param settings the gameplay settings
  * @constructor
  */
-var Level = function(data, timestep, settings) {
-	this.data = (typeof data == 'undefined') ? this.getDefaultLevelData() : data;
+var Level = function(timestep, settings) {
 	this.timestep = (typeof timestep == "undefined") ? 1 / 60: timestep;
 	this.settings = settings;
 	this.portals = [];
@@ -132,24 +131,26 @@ Level.prototype = {
 		return {
 			playerPosition: new THREE.Vector3(0, 10, 0),
 			playerRotation: new THREE.Euler(0, 0, 0, "YXZ"),
-            blockList: [],
-            portalBlocks: []
+            blockList: [
+				{ p: { x: 0, y: 0.5, z: 0 }, s: { x: 10, y: 1, z: 10 }, m: BLOCK_ENUM.BLACK_SURFACE, b: BLOCK_ENUM.CUBE, o: 0 }
+			]
 		};
 	},
 
 	/**
 	 * Initializes the scene and builds the level into it.
 	 * May be called again to reset the level.
+	 * @param data the level data in compressed format
 	 * @return Physijs.Scene the constructed scene
 	 */
-	constructScene: function() {
+	constructScene: function(data) {
 		// set update time interval
 		this.scene = new Physijs.Scene({ fixedTimeStep: timestep });
 		this.scene.setGravity(new THREE.Vector3(0, -30, 0));
 
 		// player
 		this.player = new Player(this, this.timestep, this.settings);
-		this.player.set(this.data.playerPosition, this.data.playerRotation);
+		this.player.set(data.playerPosition, data.playerRotation);
 
 		// sky
 		var sky = new THREE.Sky();
@@ -195,8 +196,13 @@ Level.prototype = {
 
 		this.scene.add(this.light);
 
-		this.createBlocks(new THREE.Vector3(0, 1.5, 0), new THREE.Vector3(60, 1, 60), BLOCK_ENUM.PORTAL_SURFACE, BLOCK_ENUM.CUBE, 0);
-		this.createBlocks(new THREE.Vector3(0, 2.5, 0), new THREE.Vector3(10, 1, 10), BLOCK_ENUM.BLACK_SURFACE, BLOCK_ENUM.CUBE, 0);
+		// add the blocks
+		this.blockList = [];
+		this.portalBlocks = [];
+		for(var i = 0; i < data.blockList.length; i++) {
+			var b = data.blockList[i];
+			this.createBlocks(new THREE.Vector3(b.p.x, b.p.y, b.p.z), new THREE.Vector3(b.s.x, b.s.y, b.s.z), b.m, b.b, b.o);
+		}
 
 		this.portals[0] = new Portal(this.scene, this.player, new THREE.Vector3(2, 0.5, 0), new THREE.Euler(-Math.PI / 2, 0, 0, "YXZ"), 0x0000ff, this.settings);
 		this.portals[1] = new Portal(this.scene, this.player, new THREE.Vector3(2, 4.5, 0), new THREE.Euler(Math.PI / 2, -Math.PI / 2, 0, "YXZ"), 0xffff00, this.settings);
@@ -218,8 +224,8 @@ Level.prototype = {
 		data.playerPosition = this.player.camera.position;
 		data.playerRotation = this.player.camera.rotation;
 		data.blockList = [];
-		for(var i = 0; i < this.data.blockList.length; i++) {
-			var block = this.data.blockList[i];
+		for(var i = 0; i < this.blockList.length; i++) {
+			var block = this.blockList[i];
 			// these are short to save space
 			data.blockList.push({
 				p: block.position, 		// position
@@ -249,9 +255,9 @@ Level.prototype = {
 		mesh.position.copy(position);
 
 		mesh.castShadow = mesh.receiveShadow = true;
-        this.data.blockList.push(mesh);
+        this.blockList.push(mesh);
         if(surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
-            this.data.portalBlocks.push(mesh);
+            this.portalBlocks.push(mesh);
         }
         // our block data
         mesh.surfaceType = surfaceType;
@@ -271,15 +277,15 @@ Level.prototype = {
 		this.raycaster.ray.direction.set(-x, -y, -z);
 		var oldpos = this.raycaster.ray.origin.clone();
 		this.raycaster.ray.origin.add(new THREE.Vector3(x, y, z))
-		var intersects = this.raycaster.intersectObjects(this.data.blockList);
+		var intersects = this.raycaster.intersectObjects(this.blockList);
 		for(var i = 0; i < intersects.length; i++) {
 			if(intersects[i].object.surfaceType) { // make sure it's actually an object and not a player or camera or something
 				this.scene.remove(intersects[i].object);
-				var j = this.data.blockList.indexOf(intersects[0].object);
-				if(j > -1) this.data.blockList.splice(j, 1);
+				var j = this.blockList.indexOf(intersects[0].object);
+				if(j > -1) this.blockList.splice(j, 1);
 				if(intersects[i].object.surfaceType == BLOCK_ENUM.PORTAL_SURFACE) {
-					j = this.data.portalBlocks.indexOf(intersects[0].object);
-					if(j > -1) this.data.portalBlocks.splice(j, 1);
+					j = this.portalBlocks.indexOf(intersects[0].object);
+					if(j > -1) this.portalBlocks.splice(j, 1);
 				}
 			}
 		}
@@ -469,7 +475,7 @@ Level.prototype = {
 						this.raycaster.ray.origin = portal.up.clone().multiplyScalar(portal.radiusY * Math.sin(theta))
 							.add(portal.left.clone().multiplyScalar(portal.radiusX * Math.cos(theta)))
 							.add(intersects[0].point);
-						if (this.raycaster.intersectObjects(this.data.portalBlocks).length == 0) {
+						if (this.raycaster.intersectObjects(this.portalBlocks).length == 0) {
 							pass = false;
 							break;
 						}

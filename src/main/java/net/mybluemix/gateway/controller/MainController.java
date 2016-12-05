@@ -32,6 +32,7 @@ public class MainController {
      */
 	@RequestMapping("/play")
 	public String play(HttpServletRequest request, Model model) {
+		model.addAttribute("data", null);
 		return "game";
 	}
 

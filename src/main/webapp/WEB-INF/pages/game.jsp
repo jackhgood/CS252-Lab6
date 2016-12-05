@@ -424,8 +424,8 @@
 		 */
 		startLevel = function () {
 			// load the level and initialize the scene
-			level = new Level(undefined, timestep, settings);
-			level.constructScene().addEventListener(
+			level = new Level(timestep, settings);
+			level.constructScene(${data == null ? "level.getDefaultLevelData()" : data}).addEventListener(
 					"update",
 					function() {
 						// if it's paused, do nothing and check again in a moment
