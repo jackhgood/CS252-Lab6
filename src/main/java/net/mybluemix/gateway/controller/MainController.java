@@ -6,6 +6,7 @@ import net.mybluemix.gateway.authenticator.RegistrationForm;
 import net.mybluemix.gateway.dao.DAOFactory;
 import net.mybluemix.gateway.dao.LevelDAO;
 import net.mybluemix.gateway.dao.LevelDAOMongo;
+import net.mybluemix.gateway.dao.UserDAOMongo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -46,8 +47,8 @@ public class MainController {
 		else {
 			String username = SecurityContextHolder.getContext().getAuthentication().getName();
 			LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
-			String data = ldm.getLevel(username, request.getParameter("level"));
-			System.out.println("Loaded level: " + request.getParameter("level") + " by " + username);
+			String data = ldm.getLevel(request.getParameter("usr"), request.getParameter("level"));
+			System.out.println("Loaded level: " + request.getParameter("level") + " by " + request.getParameter("usr"));
 			model.addAttribute("data", data);
 		}
 
@@ -82,14 +83,29 @@ public class MainController {
 	public String home(HttpServletRequest request, Model model) {
 
 		ArrayList<String> levellist;
+		ArrayList<String> userlist;
+		ArrayList<ArrayList<String>> multilist;
 		if(request.isUserInRole("ROLE_USER")) {
 			LevelDAOMongo ldm = (LevelDAOMongo)DAOFactory.getLevelDAO(servletContext);
 			levellist = ldm.getLevels(SecurityContextHolder.getContext().getAuthentication().getName());
+			UserDAOMongo udm = (UserDAOMongo)DAOFactory.getUserDAO(servletContext);
+			userlist = udm.getUsers();
+			userlist.remove(SecurityContextHolder.getContext().getAuthentication().getName());
+
+			multilist = new ArrayList<>();
+			for(int i = 0; i < userlist.size(); i++) {
+				ArrayList<String> al = ldm.getLevels(userlist.get(i));
+				al.add(0, userlist.get(i));
+				multilist.add(al);
+			}
 		}
 		else {
 			levellist = new ArrayList<>();
+			multilist = new ArrayList<>();
 		}
 		model.addAttribute("levellist", levellist);
+		model.addAttribute("multilist", multilist);
+		model.addAttribute("un", SecurityContextHolder.getContext().getAuthentication().getName());
 
 		return "main";
 	}

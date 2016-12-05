@@ -70,7 +70,7 @@ public class LevelDAOMongo implements LevelDAO {
 			return false;
 		}
 
-		if(res.hasNext()) {
+		while(res.hasNext()) {
 			DBObject dbo = res.next();
 			String p = (String)dbo.get("username");
 			if(p.equals(username)) {
@@ -82,7 +82,6 @@ public class LevelDAOMongo implements LevelDAO {
 				collection.findAndModify(dbo, bdbo);
 				return true;
 			}
-			return false;
 		}
 
 		BasicDBObject doc = new BasicDBObject();
